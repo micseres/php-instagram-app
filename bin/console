@@ -1,0 +1,36 @@
+#!/usr/bin/env php
+<?php
+
+use App\Kernel;
+use Symfony\Component\Console\Input\ArgvInput;
+use Symfony\Component\Dotenv\Dotenv;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
+use Symfony\Component\Debug\Debug;
+
+set_time_limit(0);
+date_default_timezone_set('UTC');
+
+require __DIR__.'/../vendor/autoload.php';
+
+$input = new ArgvInput();
+
+if($input->getParameterOption(['--env', '-e']) !== 'test') {
+    (new Dotenv())->load(__DIR__.'/../.env');
+} else {
+    (new Dotenv())->load(__DIR__.'/../.env.test');
+}
+
+$env = $input->getParameterOption(['--env', '-e'], $_SERVER['APP_ENV'] ?? 'dev');
+$debug = ($_SERVER['APP_DEBUG'] ?? ('prod' !== $env)) && !$input->hasParameterOption(['--no-debug', '']);
+
+if ($debug) {
+    umask(0000);
+
+    if (class_exists(Debug::class)) {
+        Debug::enable();
+    }
+}
+$kernel = new Kernel($env, $debug);
+$application = new Application($kernel);
+
+$application->run();

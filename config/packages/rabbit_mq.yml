@@ -1,0 +1,15 @@
+rabbit_mq:
+    default_connection: default
+    connections:
+        default:
+            host: '%env(RABBITMQ_HOST)%'
+            port: '%env(RABBITMQ_PORT)%'
+            login: '%env(RABBITMQ_LOGIN)%'
+            password: '%env(RABBITMQ_PASS)%'
+            vhost: '%env(RABBITMQ_VHOST)%'
+        site:
+            host: '%env(RABBITMQ_SITE_HOST)%'
+            port: '%env(RABBITMQ_SITE_PORT)%'
+            login: '%env(RABBITMQ_SITE_LOGIN)%'
+            password: '%env(RABBITMQ_SITE_PASS)%'
+            vhost: '%env(RABBITMQ_SITE_VHOST)%'

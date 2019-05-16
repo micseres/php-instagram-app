@@ -1,0 +1,4 @@
+framework:
+  #esi: ~
+  #translator: { fallbacks: ['%locale%'] }
+  secret: '%env(APP_SECRET)%'

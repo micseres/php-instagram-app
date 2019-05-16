@@ -1,0 +1,19 @@
+#parameters:
+
+services:
+  App\:
+    resource: '../src/*'
+    exclude: '../src/Command'
+    autowire: true
+    public: false
+
+  App\Command\:
+    resource: '../src/Command'
+    autowire: true
+    public: true
+    tags: [console.command]
+
+  App\Rabbit\:
+    resource: '../src/Rabbit'
+    autowire: true
+    public: true
