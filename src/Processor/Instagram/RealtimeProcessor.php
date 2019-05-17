@@ -122,9 +122,23 @@ class RealtimeProcessor
      * @param string $threadId
      * @param string $userId
      * @param DirectThreadLastSeenAt $directThreadLastSeenAt
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
      */
     public function threadSeen(string $threadId, string $userId, DirectThreadLastSeenAt $directThreadLastSeenAt): void
     {
+        $request = [
+            'method' => 'messagesInDirectHasBenSeen',
+            'payload' => [
+                'threadId' => $threadId,
+                'userId' => $userId
+            ]
+        ];
+
+
+        $this->instagramToErpQuery->publish(json_encode($request));
         printf('[RTC] Thread %s has been checked by %s%s', $threadId, $userId, PHP_EOL);
     }
 
@@ -150,7 +164,7 @@ class RealtimeProcessor
     {
         $message = json_decode($directThreadItem,  true);
 
-        var_dump($message);
+        var_dump('threadItemCreated', $message);
 
         $request = [
             'method' => 'threadItemCreated',
@@ -163,9 +177,9 @@ class RealtimeProcessor
             ]
         ];
 
-        printf('[RTC] Item %s has been created in thread %s%s', $threadItemId, $threadId, PHP_EOL);
 
         $this->instagramToErpQuery->publish(json_encode($request));
+        printf('[RTC] Item %s has been created in thread %s%s', $threadItemId, $threadId, PHP_EOL);
     }
 
     /**
@@ -190,9 +204,27 @@ class RealtimeProcessor
 
     /**
      * @param AckAction $ackAction
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
      */
     public function clientContextAck(AckAction $ackAction): void
     {
+
+        if ($ackAction->getStatus() === 'ok') {
+            $request = [
+                'method' => 'messageToDirectHasBenDelivery',
+                'payload' => [
+                    'threadId' => $ackAction->getPayload()->getThreadId(),
+                    'itemId' => $ackAction->getPayload()->getItemId(),
+                    'messageId' => $ackAction->getPayload()->getClientContext(),
+                ]
+            ];
+
+            $this->instagramToErpQuery->publish(json_encode($request));
+        }
+
         printf('[RTC] Received ACK for %s with status %s%s', $ackAction->getPayload()->getClientContext(), $ackAction->getStatus(), PHP_EOL);
     }
 

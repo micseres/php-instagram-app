@@ -52,7 +52,8 @@ class CommandProcessor
         LoopInterface $loop,
         Instagram $instagram,
         InstagramToErpQuery $instagramToErpQuery
-    ) {
+    )
+    {
         $this->realtime = $realtime;
         $this->loop = $loop;
         $this->instagram = $instagram;
@@ -65,6 +66,8 @@ class CommandProcessor
      */
     protected function handleRealtimeContext($context): PromiseInterface
     {
+        var_dump('CONTEXT');
+
         var_dump($context);
         $deferred = new Deferred();
         $this->contexts[$context] = $deferred;
@@ -76,13 +79,13 @@ class CommandProcessor
 
         return $deferred->promise()
             ->then(function (AckAction $ack) use ($timeout) {
-                var_dump(1);
+                var_dump('then');
                 var_dump($ack->getPayload()->asJson());
                 $timeout->cancel();
                 return true;
             })
             ->otherwise(function ($result) {
-                var_dump(2);
+                var_dump('otherwise');
                 var_dump($result);
                 return false;
             });
@@ -103,7 +106,7 @@ class CommandProcessor
      */
     public function indicateActivityInDirectThread(array $payload): void
     {
-        $this->handleRealtimeContext($this->realtime->indicateActivityInDirectThread($payload['threadId'], (bool) $payload['flag']))->then(function ($result) {
+        $this->handleRealtimeContext($this->realtime->indicateActivityInDirectThread($payload['threadId'], (bool)$payload['flag']))->then(function ($result) {
             var_dump($result);
         });
     }
@@ -113,8 +116,20 @@ class CommandProcessor
      */
     public function sendTextToDirect(array $payload): void
     {
-        $this->handleRealtimeContext($this->realtime->sendTextToDirect($payload['threadId'], $payload['text']))->then(function ($result) {
-            var_dump($result);
+        $this->handleRealtimeContext($context = $this->realtime->sendTextToDirect($payload['threadId'], $payload['text'], [
+            'client_context' => $payload['messageId']
+        ]))->then(function ($result) use ($payload) {
+            var_dump('sendTextToDirectResult', $result);
+
+            $request = [
+                'method' => 'messageToDirectHasBenSend',
+                'payload' => [
+                    'conversationId' => $payload['conversationId'],
+                    'messageId' => $payload['messageId'],
+                ]
+            ];
+
+            $this->instagramToErpQuery->publish(json_encode($request));
         });
     }
 
@@ -225,6 +240,29 @@ class CommandProcessor
 
         $request = [
             'method' => 'getMediaInfo',
+            'payload' => $message
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+    }
+
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function getUserInfoById(array $payload): void
+    {
+        $mediaInfo = $this->instagram->people->getInfoById($payload['userId'])->getHttpResponse()->getBody();
+
+        $message = json_decode($mediaInfo, true);
+
+        var_dump($message);
+
+        $request = [
+            'method' => 'getUserInfoById',
             'payload' => $message
         ];
 
