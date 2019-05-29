@@ -322,4 +322,55 @@ class CommandProcessor
         $this->instagramToErpQuery->publish(json_encode($request));
     }
 
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function inviteTextToDirect(array $payload): void
+    {
+        var_dump($payload);
+
+        $request = [
+            'method' => 'messageToDirectHasBenSend',
+            'payload' => [
+                'messageId' => $payload['messageId'],
+                'conversationId' => $payload['conversationId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $startDirect = $this->instagram->direct->sendText(['users' => [
+            $payload['accountId']
+        ]], $payload['text'])->getHttpResponse()->getBody();
+
+        $message = json_decode($startDirect, true);
+
+        var_dump($message);
+
+        $request = [
+            'method' => 'messageToDirectHasBenDelivery',
+            'payload' => [
+                'messageId' => $payload['messageId'],
+                'conversationId' => $payload['conversationId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $request = [
+            'method' => 'confirmInviteTextToDirect',
+            'payload' => [
+                'threadId' => $message['payload']['thread_id'],
+                'messageId' => $payload['messageId'],
+                'conversationId' => $payload['conversationId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+    }
+
 }
