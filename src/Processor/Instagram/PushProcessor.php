@@ -40,6 +40,7 @@ class PushProcessor
      */
     public function like(Notification $notification): void
     {
+        var_dump($notification);
         printf('Media ID: %s%s', $notification->getActionParam('id'), PHP_EOL);
     }
 

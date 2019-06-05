@@ -352,8 +352,9 @@ class CommandProcessor
         var_dump($message);
 
         $request = [
-            'method' => 'messageToDirectHasBenDelivery',
+            'method' => 'confirmInviteTextToDirect',
             'payload' => [
+                'threadId' => $message['payload']['thread_id'],
                 'messageId' => $payload['messageId'],
                 'conversationId' => $payload['conversationId'],
             ]
@@ -362,7 +363,7 @@ class CommandProcessor
         $this->instagramToErpQuery->publish(json_encode($request));
 
         $request = [
-            'method' => 'confirmInviteTextToDirect',
+            'method' => 'messageToDirectHasBenDelivery',
             'payload' => [
                 'threadId' => $message['payload']['thread_id'],
                 'messageId' => $payload['messageId'],
