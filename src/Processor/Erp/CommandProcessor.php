@@ -374,4 +374,57 @@ class CommandProcessor
         $this->instagramToErpQuery->publish(json_encode($request));
     }
 
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function postComment(array $payload): void
+    {
+        $commentResponse = $this->instagram->media->comment($payload['mediaId'], $payload['message']);
+
+        $message = json_decode($commentResponse, true);
+
+        var_dump($message);
+
+        $request = [
+            'method' => 'postedComment',
+            'payload' => [
+                'mediaId' => $payload['mediaId'],
+                'response' => $message
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+    }
+
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function postCommentAnswer(array $payload): void
+    {
+        $commentResponse = $this->instagram->media->comment($payload['mediaId'], $payload['message'], $payload['replyCommentId']);
+
+        $message = json_decode($commentResponse, true);
+
+        var_dump($message);
+
+        $request = [
+            'method' => 'postedCommentAnswer',
+            'payload' => [
+                'appealId' => $payload['appealId'],
+                'mediaId' => $payload['mediaId'],
+                'replyCommentId' => $payload['replyCommentId'],
+                'response' => $message
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+    }
 }
