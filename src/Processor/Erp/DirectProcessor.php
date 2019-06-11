@@ -130,19 +130,34 @@ class DirectProcessor
 
     /**
      * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
      */
     public function sendTextToDirect(array $payload): void
     {
         $this->logger->info(sprintf('Send text to direct thread %s', $payload['threadId']), $payload);
 
+        $request = [
+            'method' => 'messageToDirectHasBenSend',
+            'payload' => [
+                'conversationId' => $payload['conversationId'],
+                'messageId' => $payload['messageId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
         $this->handleRealtimeContext($context = $this->realtime->sendTextToDirect($payload['threadId'], $payload['text'], [
             'client_context' => $payload['messageId']
         ]))->then(function ($result) use ($payload) {
             $request = [
-                'method' => 'messageToDirectHasBenSend',
+                'method' => 'messageToDirectHasBenDelivery',
                 'payload' => [
                     'conversationId' => $payload['conversationId'],
                     'messageId' => $payload['messageId'],
+                    'threadId' =>  $payload['threadId']
                 ]
             ];
 
@@ -155,19 +170,34 @@ class DirectProcessor
 
     /**
      * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
      */
     public function sendPostToDirect(array $payload): void
     {
         $this->logger->info(sprintf('Send media to direct thread %s', $payload['threadId']), $payload);
 
+        $request = [
+            'method' => 'messageToDirectHasBenSend',
+            'payload' => [
+                'conversationId' => $payload['conversationId'],
+                'messageId' => $payload['messageId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
         $this->handleRealtimeContext($this->realtime->sendPostToDirect($payload['threadId'], $payload['storyId'], [
             'text' => isset($payload['text']) ? $payload['text'] : null,
         ]))->then(function ($result) use ($payload) {
             $request = [
-                'method' => 'messageToDirectHasBenSend',
+                'method' => 'messageToDirectHasBenDelivery',
                 'payload' => [
                     'conversationId' => $payload['conversationId'],
                     'messageId' => $payload['messageId'],
+                    'threadId' =>  $payload['threadId']
                 ]
             ];
 
@@ -179,19 +209,34 @@ class DirectProcessor
 
     /**
      * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
      */
     public function sendStoryToDirect(array $payload): void
     {
         $this->logger->info(sprintf('Send story to direct thread %s', $payload['threadId']), $payload);
 
+        $request = [
+            'method' => 'messageToDirectHasBenSend',
+            'payload' => [
+                'conversationId' => $payload['conversationId'],
+                'messageId' => $payload['messageId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
         $this->handleRealtimeContext($this->realtime->sendStoryToDirect($payload['threadId'], $payload['storyId'], [
             'text' => isset($payload['text']) ? $payload['text'] : null,
         ]))->then(function ($result) use ($payload) {
             $request = [
-                'method' => 'messageToDirectHasBenSend',
+                'method' => 'messageToDirectHasBenDelivery',
                 'payload' => [
                     'conversationId' => $payload['conversationId'],
                     'messageId' => $payload['messageId'],
+                    'threadId' =>  $payload['threadId']
                 ]
             ];
 
@@ -203,19 +248,34 @@ class DirectProcessor
 
     /**
      * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
      */
     public function sendProfileToDirect(array $payload): void
     {
         $this->logger->info(sprintf('Send profile to direct thread %s', $payload['threadId']), $payload);
 
+        $request = [
+            'method' => 'messageToDirectHasBenSend',
+            'payload' => [
+                'conversationId' => $payload['conversationId'],
+                'messageId' => $payload['messageId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
         $this->handleRealtimeContext($this->realtime->sendProfileToDirect($payload['threadId'], $payload['locationId'], [
             'text' => isset($payload['text']) ? $payload['text'] : null,
         ]))->then(function ($result) use ($payload) {
             $request = [
-                'method' => 'messageToDirectHasBenSend',
+                'method' => 'messageToDirectHasBenDelivery',
                 'payload' => [
                     'conversationId' => $payload['conversationId'],
                     'messageId' => $payload['messageId'],
+                    'threadId' =>  $payload['threadId']
                 ]
             ];
 
@@ -227,19 +287,34 @@ class DirectProcessor
 
     /**
      * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
      */
     public function sendLocationToDirect(array $payload): void
     {
         $this->logger->info(sprintf('Send location to direct thread %s', $payload['threadId']), $payload);
 
+        $request = [
+            'method' => 'messageToDirectHasBenSend',
+            'payload' => [
+                'conversationId' => $payload['conversationId'],
+                'messageId' => $payload['messageId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
         $this->handleRealtimeContext($this->realtime->sendLocationToDirect($payload['threadId'], $payload['locationId'], [
             'text' => isset($payload['text']) ? $payload['text'] : null,
         ]))->then(function ($result) use ($payload) {
             $request = [
-                'method' => 'messageToDirectHasBenSend',
+                'method' => 'messageToDirectHasBenDelivery',
                 'payload' => [
                     'conversationId' => $payload['conversationId'],
                     'messageId' => $payload['messageId'],
+                    'threadId' =>  $payload['threadId']
                 ]
             ];
 
@@ -251,19 +326,34 @@ class DirectProcessor
 
     /**
      * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
      */
     public function sendHashtagToDirect(array $payload): void
     {
         $this->logger->info(sprintf('Send hashtag to direct thread %s', $payload['threadId']), $payload);
 
+        $request = [
+            'method' => 'messageToDirectHasBenSend',
+            'payload' => [
+                'conversationId' => $payload['conversationId'],
+                'messageId' => $payload['messageId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
         $this->handleRealtimeContext($this->realtime->sendHashtagToDirect($payload['threadId'], $payload['hashtag'], [
             'text' => isset($payload['text']) ? $payload['text'] : null,
         ]))->then(function ($result) use ($payload) {
             $request = [
-                'method' => 'messageToDirectHasBenSend',
+                'method' => 'messageToDirectHasBenDelivery',
                 'payload' => [
                     'conversationId' => $payload['conversationId'],
                     'messageId' => $payload['messageId'],
+                    'threadId' =>  $payload['threadId']
                 ]
             ];
 
@@ -275,18 +365,33 @@ class DirectProcessor
 
     /**
      * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
      */
     public function sendLikeToDirect(array $payload): void
     {
         $this->logger->info(sprintf('Send like to direct thread %s', $payload['threadId']), $payload);
 
+        $request = [
+            'method' => 'messageToDirectHasBenSend',
+            'payload' => [
+                'conversationId' => $payload['conversationId'],
+                'messageId' => $payload['messageId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
         $this->handleRealtimeContext($this->realtime->sendLikeToDirect($payload['threadId']))
             ->then(function ($result) use ($payload) {
                 $request = [
-                    'method' => 'messageToDirectHasBenSend',
+                    'method' => 'messageToDirectHasBenDelivery',
                     'payload' => [
                         'conversationId' => $payload['conversationId'],
                         'messageId' => $payload['messageId'],
+                        'threadId' =>  $payload['threadId']
                     ]
                 ];
 
@@ -298,18 +403,33 @@ class DirectProcessor
 
     /**
      * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
      */
     public function sendReactionToDirect(array $payload): void
     {
         $this->logger->info(sprintf('Send reaction to direct thread %s', $payload['threadId']), $payload);
 
+        $request = [
+            'method' => 'messageToDirectHasBenSend',
+            'payload' => [
+                'conversationId' => $payload['conversationId'],
+                'messageId' => $payload['messageId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
         $this->handleRealtimeContext($this->realtime->sendReactionToDirect($payload['threadId'], $payload['threadItemId'], 'like'))
             ->then(function ($result) use ($payload) {
                 $request = [
-                    'method' => 'messageToDirectHasBenSend',
+                    'method' => 'messageToDirectHasBenDelivery',
                     'payload' => [
                         'conversationId' => $payload['conversationId'],
                         'messageId' => $payload['messageId'],
+                        'threadId' =>  $payload['threadId']
                     ]
                 ];
 
