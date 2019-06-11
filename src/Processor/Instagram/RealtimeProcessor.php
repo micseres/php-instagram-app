@@ -15,6 +15,7 @@ use \InstagramAPI\Response\Model\DirectThreadLastSeenAt;
 use \InstagramAPI\Realtime\Payload\ThreadActivity;
 use \InstagramAPI\Realtime\Payload\Action\AckAction;
 use InstagramAPI\Response\Model\UserPresence;
+use Psr\Log\LoggerInterface;
 
 /**
  * Class RealtimeProcessor
@@ -26,15 +27,22 @@ class RealtimeProcessor
      * @var InstagramToErpQuery
      */
     private $instagramToErpQuery;
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
 
     /**
      * PushProcessor constructor.
      * @param InstagramToErpQuery $instagramToErpQuery
+     * @param LoggerInterface $logger
      */
     public function __construct(
-        InstagramToErpQuery $instagramToErpQuery
+        InstagramToErpQuery $instagramToErpQuery,
+        LoggerInterface $logger
     ) {
         $this->instagramToErpQuery = $instagramToErpQuery;
+        $this->logger = $logger;
     }
 
     /**
@@ -42,7 +50,7 @@ class RealtimeProcessor
      */
     public function liveStarted(LiveBroadcast $broadcast): void
     {
-        printf('[RTC] Live broadcast %s has been started%s', $broadcast->getBroadcastId(), PHP_EOL);
+        $this->logger->info(sprintf('Live broadcast %s has been started', $broadcast->getBroadcastId()), []);
     }
 
     /**
@@ -50,7 +58,7 @@ class RealtimeProcessor
      */
     public function liveStopped(LiveBroadcast $broadcast): void
     {
-        printf('[RTC] Live broadcast %s has been stopped%s', $broadcast->getBroadcastId(), PHP_EOL);
+        $this->logger->info(sprintf('Live broadcast %s has been stopped', $broadcast->getBroadcastId()), []);
     }
 
     /**
@@ -58,7 +66,7 @@ class RealtimeProcessor
      */
     public function directStoryCreated(DirectThread $directThread): void
     {
-        printf('[RTC] Story %s has been created%s', $directThread->getThreadId(), PHP_EOL);
+        $this->logger->info(sprintf('Story %s has been created', $directThread->getThreadId()), []);
     }
 
 
@@ -69,7 +77,7 @@ class RealtimeProcessor
      */
     public function directStoryUpdated(string $threadId, string $threadItemId, DirectThreadItem $directThreadItem): void
     {
-        printf('[RTC] Item %s has been created in story %s%s', $threadItemId, $threadId, PHP_EOL);
+        $this->logger->info(sprintf('Item %s has been created in story %s', $threadItemId, $threadId), []);
     }
 
     /**
@@ -78,7 +86,8 @@ class RealtimeProcessor
      */
     public function directStoryScreenshot(string $threadId, StoryScreenshot $storyScreenshot): void
     {
-        printf('[RTC] %s has taken screenshot of story %s%s', $storyScreenshot->getActionUserDict()->getUsername(), $threadId, PHP_EOL);
+        $this->logger->info(sprintf('User %s has taken screenshot of story in direct %s', $storyScreenshot->getActionUserDict()->getUsername(), $threadId), []);
+
     }
 
     /**
@@ -87,7 +96,8 @@ class RealtimeProcessor
      */
     public function directStoryAction(string $threadId, ActionBadge $actionBadge): void
     {
-        printf('[RTC] Story in thread %s has badge %s now%s', $threadId, $actionBadge->getActionType(), PHP_EOL);
+        $this->logger->info(sprintf('Story in thread %s has badge %s now', $threadId, $actionBadge->getActionType()), []);
+
     }
 
     /**
@@ -96,7 +106,7 @@ class RealtimeProcessor
      */
     public function threadCreated(string $threadId, DirectThread $directThread): void
     {
-        printf('[RTC] Thread %s has been created%s', $threadId, PHP_EOL);
+        $this->logger->info(sprintf('Thread %s has been created', $threadId), []);
     }
 
     /**
@@ -105,7 +115,7 @@ class RealtimeProcessor
      */
     public function threadUpdated(string $threadId, DirectThread $directThread): void
     {
-        printf('[RTC] Thread %s has been updated%s', $threadId, PHP_EOL);
+        $this->logger->info(sprintf('Thread %s has been updated', $threadId), []);
     }
 
     /**
@@ -115,7 +125,7 @@ class RealtimeProcessor
      */
     public function threadNotify(string $threadId, string $threadItemId, ThreadAction $threadAction): void
     {
-        printf('[RTC] Thread %s has notification from %s%s', $threadId, $threadAction->getUserId(), PHP_EOL);
+        $this->logger->info(sprintf('Thread %s has notification from %s on item %s', $threadId, $threadAction->getUserId(), $threadItemId), []);
     }
 
     /**
@@ -139,7 +149,8 @@ class RealtimeProcessor
 
 
         $this->instagramToErpQuery->publish(json_encode($request));
-        printf('[RTC] Thread %s has been checked by %s%s', $threadId, $userId, PHP_EOL);
+
+        $this->logger->info(sprintf('Thread %s has been checked by %s at %s', $threadId, $userId, $directThreadLastSeenAt), []);
     }
 
     /**
@@ -148,7 +159,7 @@ class RealtimeProcessor
      */
     public function threadActivity(string $threadId, ThreadActivity $threadActivity): void
     {
-        printf('[RTC] Thread %s has some activity made by %s%s', $threadId, $threadActivity->getSenderId(), PHP_EOL);
+        $this->logger->info(sprintf('Thread %s has some activity made by %s', $threadId, $threadActivity->getSenderId()), []);
     }
 
     /**
@@ -164,8 +175,6 @@ class RealtimeProcessor
     {
         $message = json_decode($directThreadItem,  true);
 
-        var_dump('threadItemCreated', $message);
-
         $request = [
             'method' => 'threadItemCreated',
             'payload' => [
@@ -179,7 +188,8 @@ class RealtimeProcessor
 
 
         $this->instagramToErpQuery->publish(json_encode($request));
-        printf('[RTC] Item %s has been created in thread %s%s', $threadItemId, $threadId, PHP_EOL);
+
+        $this->logger->info(sprintf('Item %s has been created in thread %s', $threadItemId, $threadId), []);
     }
 
     /**
@@ -189,7 +199,7 @@ class RealtimeProcessor
      */
     public function threadItemUpdated(string $threadId, string $threadItemId, DirectThreadItem $directThreadItem): void
     {
-        printf('[RTC] Item %s has been updated in thread %s%s', $threadItemId, $threadId, PHP_EOL);
+        $this->logger->info(sprintf('Item %s has been updated in thread %s', $threadItemId, $threadId), []);
     }
 
 
@@ -199,7 +209,7 @@ class RealtimeProcessor
      */
     public function threadItemRemoved(string $threadId, string $threadItemId): void
     {
-        printf('[RTC] Item %s has been removed from thread %s%s', $threadItemId, $threadId, PHP_EOL);
+        $this->logger->info(sprintf('Item %s has been removed from thread %s', $threadItemId, $threadId), []);
     }
 
     /**
@@ -211,21 +221,8 @@ class RealtimeProcessor
      */
     public function clientContextAck(AckAction $ackAction): void
     {
-
-        if ($ackAction->getStatus() === 'ok') {
-            $request = [
-                'method' => 'messageToDirectHasBenDelivery',
-                'payload' => [
-                    'threadId' => $ackAction->getPayload()->getThreadId(),
-                    'itemId' => $ackAction->getPayload()->getItemId(),
-                    'messageId' => $ackAction->getPayload()->getClientContext(),
-                ]
-            ];
-
-            $this->instagramToErpQuery->publish(json_encode($request));
-        }
-
-        printf('[RTC] Received ACK for %s with status %s%s', $ackAction->getPayload()->getClientContext(), $ackAction->getStatus(), PHP_EOL);
+        /** @Todo that double directProcessor ACK. Understand cases and remove */
+        $this->logger->info(sprintf('Item %s get ACK status %s', $ackAction->getPayload()->getClientContext(), $ackAction->getStatus()), []);
     }
 
     /**
@@ -234,7 +231,7 @@ class RealtimeProcessor
      */
     public function unseenCountUpdate(string $inbox, DirectSeenItemPayload $directSeenItemPayload): void
     {
-        printf('[RTC] Updating unseen count in %s to %d%s', $inbox, $directSeenItemPayload->getCount(), PHP_EOL);
+        $this->logger->info(sprintf('Updating unseen count in %s to %d', $inbox, $directSeenItemPayload->getCount()), []);
     }
 
     /**
@@ -243,7 +240,7 @@ class RealtimeProcessor
     public function presence(UserPresence $userPresence): void
     {
         $action = $userPresence->getIsActive() ? 'is now using' : 'just closed';
-        printf('[RTC] User %s %s one of Instagram apps%s', $userPresence->getUserId(), $action, PHP_EOL);
+        $this->logger->info(sprintf('User %s %s one of Instagram apps', $userPresence->getUserId(), $action), []);
     }
 
 }

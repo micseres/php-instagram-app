@@ -5,6 +5,7 @@ namespace App\Processor\Instagram;
 
 use App\Rabbit\InstagramToErpQuery;
 use \InstagramAPI\Push\Notification;
+use Psr\Log\LoggerInterface;
 
 /**
  * Class PushProcessor
@@ -16,15 +17,23 @@ class PushProcessor
      * @var InstagramToErpQuery
      */
     private $instagramToErpQuery;
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
 
     /**
      * PushProcessor constructor.
      * @param InstagramToErpQuery $instagramToErpQuery
+     * @param LoggerInterface $logger
      */
     public function __construct(
-        InstagramToErpQuery $instagramToErpQuery
+        InstagramToErpQuery $instagramToErpQuery,
+        LoggerInterface $logger
+
     ) {
         $this->instagramToErpQuery = $instagramToErpQuery;
+        $this->logger = $logger;
     }
 
     /**
@@ -32,7 +41,7 @@ class PushProcessor
      */
     public function incoming(Notification $notification): void
     {
-        printf('%s%s', $notification->getMessage(), PHP_EOL);
+        $this->logger->info(sprintf('Received incoming notification "%s"',  $notification->getMessage()), $notification->getActionParams());
     }
 
     /**
@@ -40,8 +49,7 @@ class PushProcessor
      */
     public function like(Notification $notification): void
     {
-        var_dump($notification);
-        printf('Media ID: %s%s', $notification->getActionParam('id'), PHP_EOL);
+        $this->logger->info(sprintf('Received like notification for mediaId: "%s"',  $notification->getActionParam('id')), $notification->getActionParams());
     }
 
     /**
@@ -54,8 +62,6 @@ class PushProcessor
     public function comment(Notification $notification): void
     {
         $action = $notification->getActionPath();
-
-        var_dump($notification);
 
         if ($action === 'comments_v2') {
             $mediaId = $notification->getActionParam('media_id');
@@ -72,13 +78,7 @@ class PushProcessor
 
             $this->instagramToErpQuery->publish(json_encode($request));
 
-            printf(
-                'Media ID: %s. Target comment ID: %s.%s. Action %s',
-                $mediaId,
-                $targetCommentId,
-                $action,
-                PHP_EOL
-            );
+            $this->logger->info(sprintf('Comment for comment. Media ID: %s Target comment ID: %s Action: %s', $mediaId, $targetCommentId, $action), $notification->getActionParams());
         }
 
         if ($action === 'media') {
@@ -96,14 +96,11 @@ class PushProcessor
 
             $this->instagramToErpQuery->publish(json_encode($request));
 
-            printf(
-                'Media ID: %s. Comment ID: %s.%s. Action %s',
-                $mediaId,
-                $commentId,
-                $action,
-                PHP_EOL
-            );
+            $this->logger->info(sprintf('Comment for media. Media ID: %s Comment ID: %s Action: %s', $mediaId, $commentId, $action), $notification->getActionParams());
         }
+
+        $this->logger->warning(sprintf('Undefined comment message %s', $action), $notification->getActionParams());
+
     }
 
     /**
@@ -111,11 +108,7 @@ class PushProcessor
      */
     public function directMessage(Notification $notification): void
     {
-        printf(
-            'Thread ID: %s. Thread item ID: %s.%s',
-            $notification->getActionParam('id'),
-            $notification->getActionParam('x'),
-            PHP_EOL
-        );
+        $this->logger->info(sprintf('Direct message. Thread ID: %s. Thread item ID: %s', $notification->getActionParam('id'), $notification->getActionParam('x')), $notification->getActionParams());
+
     }
 }

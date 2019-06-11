@@ -7,6 +7,7 @@ use App\Rabbit\InstagramToErpQuery;
 use InstagramAPI\Instagram;
 use \InstagramAPI\Realtime;
 use InstagramAPI\Realtime\Payload\Action\AckAction;
+use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
@@ -17,20 +18,6 @@ use React\Promise\PromiseInterface;
  */
 class CommandProcessor
 {
-    const TIMEOUT = 5;
-
-    /**
-     * @var Realtime
-     */
-    private $realtime;
-
-
-    /** @var Deferred[] */
-    protected $contexts;
-    /**
-     * @var LoopInterface
-     */
-    private $loop;
     /**
      * @var Instagram
      */
@@ -39,188 +26,26 @@ class CommandProcessor
      * @var InstagramToErpQuery
      */
     private $instagramToErpQuery;
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
 
     /**
      * CommandProcessor constructor.
-     * @param Realtime $realtime
-     * @param LoopInterface $loop
      * @param Instagram $instagram
      * @param InstagramToErpQuery $instagramToErpQuery
+     * @param LoggerInterface $logger
      */
     public function __construct(
-        Realtime $realtime,
-        LoopInterface $loop,
         Instagram $instagram,
-        InstagramToErpQuery $instagramToErpQuery
+        InstagramToErpQuery $instagramToErpQuery,
+        LoggerInterface $logger
     )
     {
-        $this->realtime = $realtime;
-        $this->loop = $loop;
         $this->instagram = $instagram;
         $this->instagramToErpQuery = $instagramToErpQuery;
-    }
-
-    /**
-     * @param $context
-     * @return PromiseInterface
-     */
-    protected function handleRealtimeContext($context): PromiseInterface
-    {
-        var_dump('CONTEXT');
-
-        var_dump($context);
-        $deferred = new Deferred();
-        $this->contexts[$context] = $deferred;
-
-        $timeout = $this->loop->addTimer(self::TIMEOUT, function () use ($deferred, $context) {
-            $deferred->reject();
-            unset($this->contexts[$context]);
-        });
-
-        return $deferred->promise()
-            ->then(function (AckAction $ack) use ($timeout) {
-                var_dump('then');
-                var_dump($ack->getPayload()->asJson());
-                $timeout->cancel();
-                return true;
-            })
-            ->otherwise(function ($result) {
-                var_dump('otherwise');
-                var_dump($result);
-                return false;
-            });
-    }
-
-    /**
-     * @param array $payload
-     */
-    public function ping(array $payload): void
-    {
-        $this->handleRealtimeContext(printf('[Command] ping%s', PHP_EOL))->then(function ($result) {
-            var_dump($result);
-        });
-    }
-
-    /**
-     * @param array $payload
-     */
-    public function indicateActivityInDirectThread(array $payload): void
-    {
-        $this->handleRealtimeContext($this->realtime->indicateActivityInDirectThread($payload['threadId'], (bool)$payload['flag']))->then(function ($result) {
-            var_dump($result);
-        });
-    }
-
-    /**
-     * @param array $payload
-     */
-    public function sendTextToDirect(array $payload): void
-    {
-        $this->handleRealtimeContext($context = $this->realtime->sendTextToDirect($payload['threadId'], $payload['text'], [
-            'client_context' => $payload['messageId']
-        ]))->then(function ($result) use ($payload) {
-            var_dump('sendTextToDirectResult', $result);
-
-            $request = [
-                'method' => 'messageToDirectHasBenSend',
-                'payload' => [
-                    'conversationId' => $payload['conversationId'],
-                    'messageId' => $payload['messageId'],
-                ]
-            ];
-
-            $this->instagramToErpQuery->publish(json_encode($request));
-        });
-    }
-
-    /**
-     * @param array $payload
-     */
-    public function sendPostToDirect(array $payload): void
-    {
-        $this->handleRealtimeContext($this->realtime->sendPostToDirect($payload['threadId'], $payload['storyId'], [
-            'text' => isset($payload['text']) ? $payload['text'] : null,
-        ]))->then(function ($result) {
-            var_dump($result);
-        });
-    }
-
-    /**
-     * @param array $payload
-     */
-    public function sendStoryToDirect(array $payload): void
-    {
-        $this->handleRealtimeContext($this->realtime->sendStoryToDirect($payload['threadId'], $payload['storyId'], [
-            'text' => isset($payload['text']) ? $payload['text'] : null,
-        ]))->then(function ($result) {
-            var_dump($result);
-        });
-    }
-
-    /**
-     * @param array $payload
-     */
-    public function sendProfileToDirect(array $payload): void
-    {
-        $this->handleRealtimeContext($this->realtime->sendProfileToDirect($payload['threadId'], $payload['locationId'], [
-            'text' => isset($payload['text']) ? $payload['text'] : null,
-        ]))->then(function ($result) {
-            var_dump($result);
-        });
-    }
-
-    /**
-     * @param array $payload
-     */
-    public function sendLocationToDirect(array $payload): void
-    {
-        $this->handleRealtimeContext($this->realtime->sendLocationToDirect($payload['threadId'], $payload['locationId'], [
-            'text' => isset($payload['text']) ? $payload['text'] : null,
-        ]))->then(function ($result) {
-            var_dump($result);
-        });
-    }
-
-    /**
-     * @param array $payload
-     */
-    public function sendHashtagToDirect(array $payload): void
-    {
-        $this->handleRealtimeContext($this->realtime->sendHashtagToDirect($payload['threadId'], $payload['hashtag'], [
-            'text' => isset($payload['text']) ? $payload['text'] : null,
-        ]))->then(function ($result) {
-            var_dump($result);
-        });
-    }
-
-    /**
-     * @param array $payload
-     */
-    public function sendLikeToDirect(array $payload): void
-    {
-        $this->handleRealtimeContext($this->realtime->sendLikeToDirect($payload['threadId']))->then(function ($result) {
-            var_dump($result);
-        });
-    }
-
-    /**
-     * @param array $payload
-     */
-    public function sendReactionToDirect(array $payload): void
-    {
-        $this->handleRealtimeContext($this->realtime->sendReactionToDirect($payload['threadId'], $payload['threadItemId'], 'like'))->then(function ($result) {
-            var_dump($result);
-        });
-    }
-
-    /**
-     * @param array $payload
-     */
-    public function deleteReactionFromDirect(array $payload): void
-    {
-        $this->handleRealtimeContext($this->realtime->deleteReactionFromDirect($payload['threadId'], $payload['threadItemId'], 'like'))->then(function ($result) {
-            var_dump($result);
-        });
+        $this->logger = $logger;
     }
 
     /**
@@ -232,11 +57,11 @@ class CommandProcessor
      */
     public function getMediaInfo(array $payload): void
     {
+        $this->logger->info(sprintf('Get media %s', $payload['mediaId']), $payload);
+
         $mediaInfo = $this->instagram->media->getInfo($payload['mediaId'])->getHttpResponse()->getBody();
 
         $message = json_decode($mediaInfo, true);
-
-        var_dump($message);
 
         $request = [
             'method' => 'getMediaInfo',
@@ -244,6 +69,9 @@ class CommandProcessor
         ];
 
         $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Received media %s', $payload['mediaId']), $message);
+
     }
 
     /**
@@ -255,11 +83,11 @@ class CommandProcessor
      */
     public function getUserInfoById(array $payload): void
     {
+        $this->logger->info(sprintf('Get info about user %s', $payload['userId']), $payload);
+
         $mediaInfo = $this->instagram->people->getInfoById($payload['userId'])->getHttpResponse()->getBody();
 
         $message = json_decode($mediaInfo, true);
-
-        var_dump($message);
 
         $request = [
             'method' => 'getUserInfoById',
@@ -267,6 +95,9 @@ class CommandProcessor
         ];
 
         $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Received info about user %s', $payload['userId']), $message);
+
     }
 
     /**
@@ -278,11 +109,11 @@ class CommandProcessor
      */
     public function getMediaComments(array $payload): void
     {
+        $this->logger->info(sprintf('Get comments for media %s', $payload['mediaId']), $payload);
+
         $comments = $this->instagram->media->getComments($payload['mediaId'])->getHttpResponse()->getBody();
 
         $message = json_decode($comments, true);
-
-        var_dump($message);
 
         $request = [
             'method' => 'updateMediaComments',
@@ -293,6 +124,8 @@ class CommandProcessor
         ];
 
         $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Received comments for media %s', $payload['mediaId']), $message);
     }
 
     /**
@@ -304,11 +137,12 @@ class CommandProcessor
      */
     public function getMediaCommentAnswers(array $payload): void
     {
+
+        $this->logger->info(sprintf('Get answers for comments %s in media %s', $payload['targetCommentId'], $payload['mediaId']), $payload);
+
         $answers = $this->instagram->media->getCommentReplies($payload['mediaId'], $payload['targetCommentId'])->getHttpResponse()->getBody();
 
         $message = json_decode($answers, true);
-
-        var_dump($message);
 
         $request = [
             'method' => 'updateMediaCommentAnswers',
@@ -320,6 +154,9 @@ class CommandProcessor
         ];
 
         $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Received answers for comments %s in media %s', $payload['targetCommentId'], $payload['mediaId']), $message);
+
     }
 
     /**
@@ -331,7 +168,7 @@ class CommandProcessor
      */
     public function inviteTextToDirect(array $payload): void
     {
-        var_dump($payload);
+        $this->logger->info(sprintf('Post invite text to direct %s', $payload['accountId']), $payload);
 
         $request = [
             'method' => 'messageToDirectHasBenSend',
@@ -347,9 +184,8 @@ class CommandProcessor
             $payload['accountId']
         ]], $payload['text'])->getHttpResponse()->getBody();
 
-        $message = json_decode($startDirect, true);
 
-        var_dump($message);
+        $message = json_decode($startDirect, true);
 
         $request = [
             'method' => 'confirmInviteTextToDirect',
@@ -372,6 +208,8 @@ class CommandProcessor
         ];
 
         $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Posted invite text to direct %s', $payload['accountId']), $message);
     }
 
     /**
@@ -383,11 +221,11 @@ class CommandProcessor
      */
     public function postComment(array $payload): void
     {
+        $this->logger->info(sprintf('Post comment to media %s', $payload['mediaId']), $payload);
+
         $commentResponse = $this->instagram->media->comment($payload['mediaId'], $payload['message']);
 
         $message = json_decode($commentResponse, true);
-
-        var_dump($message);
 
         $request = [
             'method' => 'postedComment',
@@ -398,6 +236,8 @@ class CommandProcessor
         ];
 
         $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Posted comment to media %s', $payload['mediaId']), $payload);
     }
 
     /**
@@ -409,11 +249,11 @@ class CommandProcessor
      */
     public function postCommentAnswer(array $payload): void
     {
+        $this->logger->info(sprintf('Post answer to comment %s in media %s', $payload['replyCommentId'], $payload['mediaId']), $payload);
+
         $commentResponse = $this->instagram->media->comment($payload['mediaId'], $payload['message'], $payload['replyCommentId']);
 
         $message = json_decode($commentResponse, true);
-
-        var_dump($message);
 
         $request = [
             'method' => 'postedCommentAnswer',
@@ -426,5 +266,7 @@ class CommandProcessor
         ];
 
         $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Posted answer to comment %s in media %s', $payload['replyCommentId'], $payload['mediaId']), $message);
     }
 }

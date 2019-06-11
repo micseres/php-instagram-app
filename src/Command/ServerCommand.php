@@ -7,11 +7,12 @@ use App\Exception\InstagramLoginException;
 use App\Processor\Erp\CommandProcessor;
 use App\Processor\Instagram\PushProcessor;
 use App\Processor\Instagram\RealtimeProcessor;
+use App\Processor\Erp\DirectProcessor;
 use App\Rabbit\ErpToInstagramQuery;
 use App\Rabbit\InstagramToErpQuery;
+use Monolog\Handler\StreamHandler;
 use Psr\Log\LoggerInterface;
 use React\EventLoop\LoopInterface;
-use React\EventLoop\StreamSelectLoop;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -45,10 +46,6 @@ class ServerCommand extends Command
      * @var InstagramToErpQuery
      */
     private $instagramToErpQuery;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
 
     /**
      * ServerCommand constructor.
@@ -82,6 +79,7 @@ class ServerCommand extends Command
      * @throws \AMQPEnvelopeException
      * @throws \AMQPQueueException
      * @throws InstagramLoginException
+     * @throws \Exception
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
@@ -95,13 +93,12 @@ class ServerCommand extends Command
             )
         );
 
-        /////// CONFIG ///////
         $username = getenv('APP_IG_LOGIN');
         $password = getenv('APP_IG_PASS');
-        $debug = true;
-        $truncatedDebug = false;
+        $processorsDebug = (bool)getenv('APP_PROCESSORS_DEBUG');
+        $igDebug = (bool)getenv('APP_IG_DEBUG');
 
-        $ig = new Instagram($debug, $truncatedDebug);
+        $ig = new Instagram($igDebug);
 
         try {
             $ig->login($username, $password);
@@ -109,31 +106,43 @@ class ServerCommand extends Command
             throw new InstagramLoginException('Can`t login into instagram: '.$e->getMessage());
         }
 
-        if ($debug) {
-            $pushLogger = new Logger('PUSHIER');
-            $pushLogger->pushHandler(new \Monolog\Handler\StreamHandler('php://stdout', \Monolog\Logger::INFO));
+        $logPath = __DIR__.'/../../var/log/';
 
-            $realtimeLogger = new Logger('REALTIME');
-            $realtimeLogger->pushHandler(new \Monolog\Handler\StreamHandler('php://stdout', \Monolog\Logger::INFO));
+        $pushLogger = new Logger('IG_PUSHIER');
+        $pushProcessorLogger = new Logger('APP_PUSHIER_PROCESSOR');
+        $realtimeLogger = new Logger('IG_REALTIME');
+        $realtimeProcessorLogger = new Logger('IG_REALTIME_PROCESSOR');
+        $commandLogger = new Logger('IG_COMMAND');
+        $commandProcessorLogger = new Logger('IG_COMMAND_PROCESSOR');
+        $directProcessorLogger = new Logger('IG_DIRECT_PROCESSOR');
 
-            $commandLogger = new Logger('COMMAND');
-            $commandLogger->pushHandler(new \Monolog\Handler\StreamHandler('php://stdout', \Monolog\Logger::INFO));
-        } else {
-            $pushLogger = null;
-            $realtimeLogger = null;
-            $commandLogger = null;
+        $pushLogger->pushHandler(new StreamHandler($logPath.'push_logger.log', Logger::INFO));
+        $pushProcessorLogger->pushHandler(new StreamHandler($logPath.'push_processor_logger.log', Logger::INFO));
+        $realtimeLogger->pushHandler(new StreamHandler($logPath.'realtime_logger.log', Logger::INFO));
+        $realtimeProcessorLogger->pushHandler(new StreamHandler($logPath.'realtime_processor_logger.log', Logger::INFO));
+        $commandLogger->pushHandler(new StreamHandler($logPath.'command_logger.log', Logger::INFO));
+        $commandProcessorLogger->pushHandler(new StreamHandler($logPath.'command_processor_logger.log', Logger::INFO));
+        $directProcessorLogger->pushHandler(new StreamHandler($logPath.'direct_processor_logger.log', Logger::INFO));
+
+        if ($processorsDebug) {
+            $pushLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
+            $pushProcessorLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
+            $realtimeLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
+            $realtimeProcessorLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
+            $commandLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
+            $commandProcessorLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
+            $directProcessorLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
         }
-
-
 
         $loop = Factory::create();
 
         $push = new InstagramAPIPush($loop, $ig, $pushLogger);
         $rtc = new InstagramAPIRealtime($ig, $loop, $realtimeLogger);
 
-        $pushProcessor = new PushProcessor($this->instagramToErpQuery);
-        $realtimeProcessor = new RealtimeProcessor($this->instagramToErpQuery);
-        $commandProcessor = new CommandProcessor($rtc, $loop, $ig, $this->instagramToErpQuery);
+        $pushProcessor = new PushProcessor($this->instagramToErpQuery, $pushProcessorLogger);
+        $realtimeProcessor = new RealtimeProcessor($this->instagramToErpQuery, $realtimeProcessorLogger);
+        $commandProcessor = new CommandProcessor($ig, $this->instagramToErpQuery, $commandProcessorLogger);
+        $directProcessor = new DirectProcessor($rtc, $loop, $ig, $this->instagramToErpQuery, $commandProcessorLogger);
 
         $push->on('incoming', [$pushProcessor, 'incoming']);
         $push->on('like', [$pushProcessor, 'like']);
@@ -160,9 +169,11 @@ class ServerCommand extends Command
         $rtc->on('thread-item-created', [$realtimeProcessor, 'threadItemCreated']);
         $rtc->on('thread-item-updated', [$realtimeProcessor, 'threadItemUpdated']);
         $rtc->on('thread-item-removed', [$realtimeProcessor, 'threadItemRemoved']);
-        $rtc->on('client-context-ack', [$realtimeProcessor, 'clientContextAck']);
         $rtc->on('unseen-count-update', [$realtimeProcessor, 'unseenCountUpdate']);
         $rtc->on('presence', [$realtimeProcessor, 'presence']);
+
+        $rtc->on('client-context-ack', [$directProcessor, 'clientContextAck']);
+        $rtc->on('client-context-ack', [$realtimeProcessor, 'clientContextAck']);
 
         $rtc->on('error', function (\Exception $e) use ($rtc, $loop) {
             printf('[!!!] Got fatal error from Realtime: %s%s', $e->getMessage(), PHP_EOL);
@@ -170,34 +181,27 @@ class ServerCommand extends Command
             $loop->stop();
         });
 
-        $this->readErpCommand($loop, $commandProcessor);
+        $queue = $this->erpToInstagramQuery->getQueue();
+
+        $loop->addPeriodicTimer(0.1, function () use ($queue, $commandProcessor, $directProcessor) {
+            $message = $queue->get();
+
+            if (false !== $message) {
+                $payload = json_decode($message->getBody(),  true);
+
+                if ($payload['processor'] === 'direct') {
+                    call_user_func([$directProcessor, $payload['method']], $payload['payload']);
+                } else {
+                    call_user_func([$commandProcessor, $payload['method']], $payload['payload']);
+                }
+
+                $queue->ack($message->getDeliveryTag());
+            }
+        });
 
         $rtc->start();
         $push->start();
 
         $loop->run();
-    }
-
-
-    /**
-     * @param LoopInterface $loop
-     * @param CommandProcessor $commandProcessor
-     * @throws \AMQPChannelException
-     * @throws \AMQPConnectionException
-     * @throws \AMQPQueueException
-     */
-    private function readErpCommand(LoopInterface $loop, CommandProcessor $commandProcessor): void
-    {
-        $queue = $this->erpToInstagramQuery->getQueue();
-
-        $loop->addPeriodicTimer(0.1, function () use ($queue, $commandProcessor) {
-            $message = $queue->get();
-
-            if (false !== $message) {
-                $payload = json_decode($message->getBody(),  true);
-                call_user_func([$commandProcessor, $payload['method']], $payload['payload']);
-                $queue->ack($message->getDeliveryTag());
-            }
-        });
     }
 }
