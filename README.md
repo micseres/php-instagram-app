@@ -1,11 +1,25 @@
 # Instagram App
 
-### 
+## How to run in ERP
+
+Setup 'chat_instagram_reciever' supervisor command and run
+
+## How to run service
+
+Setup https://github.com/micseres/php-instagram-app
+
+Check .env
+
+Setup 'instagram_app_server' supervisor command
+
+## Command examples 
+
 Payload basic example
 
 ```json
 {
-   "module": "command",
+
+   "processor": "direct",
    "method": "directMessage",
    "payload": {
      "threadId": "info",
@@ -13,11 +27,19 @@ Payload basic example
    }
 }
 ```
-#### Get Instagram media
+Get Instagram media example
 
 ```json
-{"method": "getMediaInfo", "payload": {"mediaId": "2040627589441440151_1441708245"}}
-{"method": "getMediaInfo", "payload": {"mediaId": "2040627589441440151_1441708245"}} 
-// [RTC] Item 28738729387766730515735365036277760 has been created in thread 340282366841710300949128253906845274935
-
+{
+    "processor": "command",
+    "method": "getMediaInfo", 
+    "payload": {
+        "mediaId": "2040627589441440151_1441708245"
+        }
+}
 ```
+
+## Processors
+
+'direct' - for send direct messages with ack async response
+'command' - instagram API calls
