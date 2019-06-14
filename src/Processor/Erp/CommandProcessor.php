@@ -269,4 +269,33 @@ class CommandProcessor
 
         $this->logger->info(sprintf('Posted answer to comment %s in media %s', $payload['replyCommentId'], $payload['mediaId']), $message);
     }
+
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function checkMediaLikes(array $payload): void
+    {
+        $this->logger->info(sprintf('Check likes for media %s', $payload['mediaId']), $payload);
+
+        $likers = $this->instagram->media->getLikers($payload['mediaId']);
+
+        $message = json_decode($likers, true);
+
+        $request = [
+            'method' => 'updateMediaLikes',
+            'payload' => [
+                'mediaId' => $payload['mediaId'],
+                'response' => $message
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+
+        $this->logger->info(sprintf('Checked likes for media %s', $payload['mediaId']), $payload);
+    }
 }

@@ -46,9 +46,22 @@ class PushProcessor
 
     /**
      * @param Notification $notification
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
      */
     public function like(Notification $notification): void
     {
+        $request = [
+            'method' => 'getNewLikeForMedia',
+            'payload' => [
+                'mediaId' => $notification->getActionParam('id'),
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
         $this->logger->info(sprintf('Received like notification for mediaId: "%s"',  $notification->getActionParam('id')), $notification->getActionParams());
     }
 
