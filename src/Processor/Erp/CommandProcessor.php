@@ -298,4 +298,35 @@ class CommandProcessor
 
         $this->logger->info(sprintf('Checked likes for media %s', $payload['mediaId']), $payload);
     }
+
+
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function refreshThread(array $payload): void
+    {
+        $this->logger->info(sprintf('Reread messages in thread %s', $payload['threadId']), $payload);
+
+        $messages = $this->instagram->direct->getThread($payload['threadId'], $payload['cursor']);
+
+        $message = json_decode($messages, true);
+
+        $request = [
+            'method' => 'refreshThread',
+            'payload' => [
+                'appealId' => $payload['appealId'],
+                'conversationId' => $payload['conversationId'],
+                'threadId' => $payload['threadId'],
+                'response' => $message
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Retreaded messages in thread %s', $payload['threadId']), $payload);
+    }
 }
