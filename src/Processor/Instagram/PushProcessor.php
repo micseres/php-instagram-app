@@ -92,6 +92,8 @@ class PushProcessor
             $this->instagramToErpQuery->publish(json_encode($request));
 
             $this->logger->info(sprintf('Comment for comment. Media ID: %s Target comment ID: %s Action: %s', $mediaId, $targetCommentId, $action), $notification->getActionParams());
+
+            return;
         }
 
         if ($action === 'media') {
@@ -110,6 +112,8 @@ class PushProcessor
             $this->instagramToErpQuery->publish(json_encode($request));
 
             $this->logger->info(sprintf('Comment for media. Media ID: %s Comment ID: %s Action: %s', $mediaId, $commentId, $action), $notification->getActionParams());
+
+            return;
         }
 
         $this->logger->warning(sprintf('Undefined comment message %s', $action), $notification->getActionParams());
