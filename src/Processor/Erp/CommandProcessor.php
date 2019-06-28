@@ -329,4 +329,33 @@ class CommandProcessor
 
         $this->logger->info(sprintf('Retreaded messages in thread %s', $payload['threadId']), $payload);
     }
+
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function searchExistsThreadIdToConversation(array $payload): void
+    {
+        $this->logger->info(sprintf('Find thread by account: %s', $payload['accountId']), $payload);
+
+        $response = $this->instagram->direct->getThreadByParticipants([$payload['accountId']]);
+
+        $message = json_decode($response, true);
+
+        $request = [
+            'method' => 'updateExistsThreadIdToConversation',
+            'payload' => [
+                'accountId' => $payload['accountId'],
+                'conversationId' => $payload['conversationId'],
+                'response' => $message
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Found thread by account: %s', $payload['accountId']), $payload);
+    }
 }
