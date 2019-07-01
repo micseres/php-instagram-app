@@ -2,3 +2,4 @@
 vendor/
 var/
 .env
+!var/files/.gitkeep

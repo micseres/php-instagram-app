@@ -392,4 +392,56 @@ class CommandProcessor
 
         $this->logger->info(sprintf('Found thread by account: %s', $payload['accountId']), $payload);
     }
+
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function sendPhotoToDirect(array $payload): void
+    {
+        $this->logger->info(sprintf('Send photo to user %s', $payload['accountId']), $payload);
+
+        $request = [
+            'method' => 'messageToDirectHasBenSend',
+            'payload' => [
+                'messageId' => $payload['messageId'],
+                'conversationId' => $payload['conversationId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $data = preg_replace('#^data:image/[^;]+;base64,#', '', $payload['photo']);
+        $data = base64_decode($data);
+        $filename = __DIR__.'/../../../var/files/'.uniqid().'.jpg';
+        file_put_contents($filename, $data);
+
+        $recipients = [];
+        $recipients['thread'] = $payload['threadId'];
+        $ack = $this->instagram->direct->sendPhoto($recipients, $filename);
+        $message = json_decode($ack, true);
+
+        var_dump($message);
+
+        unlink($filename);
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $request = [
+            'method' => 'messageToDirectHasBenDelivery',
+            'payload' => [
+                'itemId' => $message['payload']['item_id'],
+                'threadId' => $payload['threadId'],
+                'messageId' => $payload['messageId'],
+                'conversationId' => $payload['conversationId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Sent photo to user %s', $payload['threadId']), $payload);
+    }
 }
