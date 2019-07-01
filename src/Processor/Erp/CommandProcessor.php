@@ -4,13 +4,9 @@
 namespace App\Processor\Erp;
 
 use App\Rabbit\InstagramToErpQuery;
+use InstagramAPI\Exception\InstagramException;
 use InstagramAPI\Instagram;
-use \InstagramAPI\Realtime;
-use InstagramAPI\Realtime\Payload\Action\AckAction;
 use Psr\Log\LoggerInterface;
-use React\EventLoop\LoopInterface;
-use React\Promise\Deferred;
-use React\Promise\PromiseInterface;
 
 /**
  * Class CommandProcessor
@@ -59,7 +55,27 @@ class CommandProcessor
     {
         $this->logger->info(sprintf('Get media %s', $payload['mediaId']), $payload);
 
-        $mediaInfo = $this->instagram->media->getInfo($payload['mediaId'])->getHttpResponse()->getBody();
+        try {
+            $mediaInfo = $this->instagram->media->getInfo($payload['mediaId'])->getHttpResponse()->getBody();
+        } catch (InstagramException $exception) {
+            if (strpos($exception->getMessage(), 'Media not found or unavailable')) {
+                $request = [
+                    'method' => 'mediaWasDeleted',
+                    'payload' => [
+                        'mediaId' => $payload['mediaId'],
+                    ]
+                ];
+
+                $this->instagramToErpQuery->publish(json_encode($request));
+
+                $this->logger->warning(sprintf('Media was deleted %s', $payload['mediaId']), []);
+
+                return;
+            }
+
+            throw $exception;
+        }
+
 
         $message = json_decode($mediaInfo, true);
 
@@ -71,7 +87,6 @@ class CommandProcessor
         $this->instagramToErpQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Received media %s', $payload['mediaId']), $message);
-
     }
 
     /**
@@ -281,7 +296,26 @@ class CommandProcessor
     {
         $this->logger->info(sprintf('Check likes for media %s', $payload['mediaId']), $payload);
 
-        $likers = $this->instagram->media->getLikers($payload['mediaId']);
+        try {
+            $likers = $this->instagram->media->getLikers($payload['mediaId']);
+        } catch (InstagramException $exception) {
+            if (strpos($exception->getMessage(), 'Sorry, this photo has been deleted.')) {
+                $request = [
+                    'method' => 'mediaWasDeleted',
+                    'payload' => [
+                        'mediaId' => $payload['mediaId'],
+                    ]
+                ];
+
+                $this->instagramToErpQuery->publish(json_encode($request));
+
+                $this->logger->warning(sprintf('Media was deleted %s', $payload['mediaId']), []);
+
+                return;
+            }
+
+            throw $exception;
+        }
 
         $message = json_decode($likers, true);
 
