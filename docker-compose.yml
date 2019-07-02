@@ -1,0 +1,9 @@
+version: '3'
+services:
+
+  php-instagram-app:
+    build: ./
+    container_name: php-instagram-app
+    image: zogxray/php-instagram-app
+    volumes:
+      - .:/app
