@@ -3,24 +3,26 @@
 
 namespace App\Command;
 
+use App\Exception\InstagramChallengeCodeException;
 use App\Exception\InstagramLoginException;
+use App\Instagram\ExtendedInstagram;
 use App\Processor\Erp\CommandProcessor;
 use App\Processor\Instagram\PushProcessor;
 use App\Processor\Instagram\RealtimeProcessor;
 use App\Processor\Erp\DirectProcessor;
 use App\Rabbit\ErpToInstagramQuery;
 use App\Rabbit\InstagramToErpQuery;
+use InstagramAPI\Exception\ChallengeRequiredException;
 use Monolog\Handler\StreamHandler;
 use Psr\Log\LoggerInterface;
-use React\EventLoop\LoopInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use \React\EventLoop\Factory;
-use \InstagramAPI\Instagram;
 use \Monolog\Logger;
 use \InstagramAPI\Push as InstagramAPIPush;
 use \InstagramAPI\Realtime as InstagramAPIRealtime;
+
 
 /**
  * Class PushReceiverCommand
@@ -28,6 +30,9 @@ use \InstagramAPI\Realtime as InstagramAPIRealtime;
  */
 class ServerCommand extends Command
 {
+    const VERIFICATION_BY_SMS = 0;
+    const VERIFICATION_BY_EMAIL = 1;
+
     /** @var InputInterface */
     private $input;
 
@@ -98,12 +103,68 @@ class ServerCommand extends Command
         $processorsDebug = (bool)getenv('APP_PROCESSORS_DEBUG');
         $igDebug = (bool)getenv('APP_IG_DEBUG');
 
-        $ig = new Instagram($igDebug);
+        $ig = new ExtendedInstagram($igDebug);
 
         try {
-            $ig->login($username, $password);
+            $loginResponse = $ig->login($username, $password);
+
+            if ($loginResponse !== null && $loginResponse->isTwoFactorRequired()) {
+                $twoFactorIdentifier = $loginResponse->getTwoFactorInfo()->getTwoFactorIdentifier();
+                $this->output->writeln('Enter code for two factor auth:' );
+                $verificationCode = trim((string)fgets(STDIN));
+                $ig->finishTwoFactorLogin($username, $password, $twoFactorIdentifier, $verificationCode);
+            }
         } catch (\Exception $e) {
-            throw new InstagramLoginException('Can`t login into instagram: '.$e->getMessage());
+            $response = $e->getResponse();
+
+            if ($e instanceof ChallengeRequiredException
+                && $response->getErrorType() === 'checkpoint_challenge_required') {
+
+                sleep(3);
+
+                $checkApiPath = substr( $response->getChallenge()->getApiPath(), 1);
+
+                $customResponse = $ig->request($checkApiPath)
+                    ->setNeedsAuth(false)
+                    ->addPost('choice', self::VERIFICATION_BY_EMAIL)
+                    ->addPost('_uuid', $ig->uuid)
+                    ->addPost('guid', $ig->uuid)
+                    ->addPost('device_id', $ig->device_id)
+                    ->addPost('_uid', $ig->account_id)
+                    ->addPost('_csrftoken', $ig->client->getToken())
+                    ->getDecodedResponse();
+
+                try {
+                    if ($customResponse['status'] === 'ok' && $customResponse['action'] === 'close') {
+                        $this->output->writeln('Checkpoint bypassed! Run this file again to validate that it works.');
+                        exit();
+                    }
+
+                    $this->output->writeln('Code that you received via ' . ( self::VERIFICATION_BY_EMAIL ? 'email' : 'sms' ) . ':' );
+                    $code = trim((string)fgets(STDIN));
+                    $ig->changeUser($username, $password);
+
+                    $customResponse = $ig->request($checkApiPath)
+                        ->setNeedsAuth(false)
+                        ->addPost('security_code', $code)
+                        ->addPost('_uuid', $ig->uuid)
+                        ->addPost('guid', $ig->uuid)
+                        ->addPost('device_id', $ig->device_id)
+                        ->addPost('_uid', $ig->account_id)
+                        ->addPost('_csrftoken', $ig->client->getToken())
+                        ->getDecodedResponse();
+
+                    if ($customResponse['status'] === 'ok') {
+                        $this->output->writeln('Finished, logged in successfully! Run this file again to validate that it works.');
+                    } else {
+                        throw new InstagramChallengeCodeException($customResponse);
+                    }
+                } catch ( \Exception $ex ) {
+                    throw new InstagramLoginException($ex->getMessage());
+                }
+            } else {
+                throw new InstagramLoginException($e->getMessage());
+            }
         }
 
         $logPath = __DIR__.'/../../var/log/';
