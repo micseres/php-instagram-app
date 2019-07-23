@@ -126,7 +126,11 @@ class CommandProcessor
     {
         $this->logger->info(sprintf('Get comments for media %s', $payload['mediaId']), $payload);
 
-        $comments = $this->instagram->media->getComments($payload['mediaId'])->getHttpResponse()->getBody();
+        if (isset($payload['nextMaxId'])) {
+            $comments = $this->instagram->media->getComments($payload['mediaId'], ['max_id' => $payload['nextMaxId']])->getHttpResponse()->getBody();
+        } else {
+            $comments = $this->instagram->media->getComments($payload['mediaId'])->getHttpResponse()->getBody();
+        }
 
         $message = json_decode($comments, true);
 
@@ -141,6 +145,34 @@ class CommandProcessor
         $this->instagramToErpQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Received comments for media %s', $payload['mediaId']), $message);
+    }
+
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function getMediaComment(array $payload): void
+    {
+        $this->logger->info(sprintf('Get comment %s for media %s', $payload['commentId'], $payload['mediaId']), $payload);
+
+        $comments = $this->instagram->media->getComments($payload['mediaId'], ['target_comment_id' => $payload['commentId']])->getHttpResponse()->getBody();
+
+        $message = json_decode($comments, true);
+
+        $request = [
+            'method' => 'updateMediaComment',
+            'payload' => [
+                'mediaId' => $payload['mediaId'],
+                'response' => $message
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Received comment %s for media %s', $payload['commentId'], $payload['mediaId']), $message);
     }
 
     /**
