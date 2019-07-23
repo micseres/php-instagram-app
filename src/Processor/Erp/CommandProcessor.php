@@ -345,7 +345,24 @@ class CommandProcessor
     {
         $this->logger->info(sprintf('Reread messages in thread %s', $payload['threadId']), $payload);
 
-        $messages = $this->instagram->direct->getThread($payload['threadId'], $payload['cursor']);
+        try {
+            $messages = $this->instagram->direct->getThread($payload['threadId'], $payload['cursor']);
+        } catch (\InstagramAPI\Exception\NotFoundException $exception) {
+            $request = [
+                'method' => 'closeThread',
+                'payload' => [
+                    'appealId' => $payload['appealId'],
+                    'conversationId' => $payload['conversationId'],
+                    'threadId' => $payload['threadId'],
+                ]
+            ];
+
+            $this->instagramToErpQuery->publish(json_encode($request));
+
+            $this->logger->info(sprintf('Thread deleted in Instagram %s', $payload['threadId']), $payload);
+
+            return;
+        }
 
         $message = json_decode($messages, true);
 
@@ -361,7 +378,7 @@ class CommandProcessor
 
         $this->instagramToErpQuery->publish(json_encode($request));
 
-        $this->logger->info(sprintf('Retreaded messages in thread %s', $payload['threadId']), $payload);
+        $this->logger->info(sprintf('Rereaded messages in thread %s', $payload['threadId']), $payload);
     }
 
     /**
@@ -423,8 +440,6 @@ class CommandProcessor
         $recipients['thread'] = $payload['threadId'];
         $ack = $this->instagram->direct->sendPhoto($recipients, $filename);
         $message = json_decode($ack, true);
-
-        var_dump($message);
 
         unlink($filename);
 
