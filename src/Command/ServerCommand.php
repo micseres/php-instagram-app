@@ -244,7 +244,7 @@ class ServerCommand extends Command
 
         $queue = $this->erpToInstagramQuery->getQueue();
 
-        $loop->addPeriodicTimer(3, function () use ($queue, $commandProcessor, $directProcessor) {
+        $loop->addPeriodicTimer(5, function () use ($queue, $commandProcessor, $directProcessor) {
             $message = $queue->get();
 
             if (false !== $message) {
