@@ -166,6 +166,7 @@ class CommandProcessor
             'method' => 'updateMediaComment',
             'payload' => [
                 'mediaId' => $payload['mediaId'],
+                'commentId' => $payload['commentId'],
                 'response' => $message
             ]
         ];

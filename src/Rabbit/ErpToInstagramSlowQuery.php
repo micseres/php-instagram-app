@@ -3,17 +3,18 @@
 
 namespace App\Rabbit;
 
+
 use GepurIt\RabbitMqBundle\Configurator\SimpleDeadDeferredConfigurator;
 use GepurIt\RabbitMqBundle\RabbitInterface;
 
 /**
- * Class InstagramToErpQuery
+ * Class ErpToInstagramSlowQuery
  * @package App\Rabbit
  */
-class InstagramToErpQuery extends SimpleDeadDeferredConfigurator
+class ErpToInstagramSlowQuery extends SimpleDeadDeferredConfigurator
 {
-    const QUEUE_NAME          = 'instagram_to_erp';
-    const QUEUE_NAME_DEFERRED = 'instagram_to_erp_deferred';
+    const QUEUE_NAME          = 'erp_to_instagram_slow';
+    const QUEUE_NAME_DEFERRED = 'erp_to_instagram_slow_deferred';
 
     /**
      * ErpToInstagramQuery constructor.

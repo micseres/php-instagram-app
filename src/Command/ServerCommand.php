@@ -11,6 +11,7 @@ use App\Processor\Instagram\PushProcessor;
 use App\Processor\Instagram\RealtimeProcessor;
 use App\Processor\Erp\DirectProcessor;
 use App\Rabbit\ErpToInstagramQuery;
+use App\Rabbit\ErpToInstagramSlowQuery;
 use App\Rabbit\InstagramToErpQuery;
 use InstagramAPI\Exception\ChallengeRequiredException;
 use Monolog\Handler\StreamHandler;
@@ -51,20 +52,26 @@ class ServerCommand extends Command
      * @var InstagramToErpQuery
      */
     private $instagramToErpQuery;
+    /**
+     * @var ErpToInstagramSlowQuery
+     */
+    private $erpToInstagramSlowQuery;
 
     /**
      * ServerCommand constructor.
      * @param InstagramToErpQuery $instagramToErpQuery
      * @param ErpToInstagramQuery $erpToInstagramQuery
-     * @param LoggerInterface $logger
+     * @param ErpToInstagramSlowQuery $erpToInstagramSlowQuery
      */
     public function __construct(
         InstagramToErpQuery $instagramToErpQuery,
-        ErpToInstagramQuery $erpToInstagramQuery
+        ErpToInstagramQuery $erpToInstagramQuery,
+        ErpToInstagramSlowQuery $erpToInstagramSlowQuery
     ) {
         parent::__construct();
         $this->erpToInstagramQuery = $erpToInstagramQuery;
         $this->instagramToErpQuery = $instagramToErpQuery;
+        $this->erpToInstagramSlowQuery = $erpToInstagramSlowQuery;
     }
 
     protected function configure()
@@ -211,7 +218,9 @@ class ServerCommand extends Command
         $push->on('direct_v2_message', [$pushProcessor, 'directMessage']);
 
         $push->on('error', function (\Exception $e) use ($push, $loop) {
-            printf('[!!!] Got fatal error from FBNS: %s%s', $e->getMessage(), PHP_EOL);
+            $this->output->writeln(
+                sprintf('[!!!] Got fatal error from FBNS: %s%s', $e->getMessage(), PHP_EOL)
+            );
             $push->stop();
             $loop->stop();
         });
@@ -237,15 +246,17 @@ class ServerCommand extends Command
         $rtc->on('client-context-ack', [$realtimeProcessor, 'clientContextAck']);
 
         $rtc->on('error', function (\Exception $e) use ($rtc, $loop) {
-            printf('[!!!] Got fatal error from Realtime: %s%s', $e->getMessage(), PHP_EOL);
+            $this->output->writeln(
+                sprintf('[!!!] Got fatal error from Realtime: %s%s', $e->getMessage(), PHP_EOL)
+            );
             $rtc->stop();
             $loop->stop();
         });
 
-        $queue = $this->erpToInstagramQuery->getQueue();
+        $shortIntervalQueue = $this->erpToInstagramQuery->getQueue();
 
-        $loop->addPeriodicTimer(5, function () use ($queue, $commandProcessor, $directProcessor) {
-            $message = $queue->get();
+        $loop->addPeriodicTimer(5, function () use ($shortIntervalQueue, $commandProcessor, $directProcessor) {
+            $message = $shortIntervalQueue->get();
 
             if (false !== $message) {
                 $payload = json_decode($message->getBody(),  true);
@@ -256,9 +267,28 @@ class ServerCommand extends Command
                     call_user_func([$commandProcessor, $payload['method']], $payload['payload']);
                 }
 
-                $queue->ack($message->getDeliveryTag());
+                $shortIntervalQueue->ack($message->getDeliveryTag());
             }
         });
+
+        $longIntervalQueue = $this->erpToInstagramSlowQuery->getQueue();
+
+        $loop->addPeriodicTimer(20, function () use ($longIntervalQueue, $commandProcessor, $directProcessor) {
+            $message = $longIntervalQueue->get();
+
+            if (false !== $message) {
+                $payload = json_decode($message->getBody(),  true);
+
+                if ($payload['processor'] === 'direct') {
+                    call_user_func([$directProcessor, $payload['method']], $payload['payload']);
+                } else {
+                    call_user_func([$commandProcessor, $payload['method']], $payload['payload']);
+                }
+
+                $longIntervalQueue->ack($message->getDeliveryTag());
+            }
+        });
+
 
         $rtc->start();
         $push->start();
