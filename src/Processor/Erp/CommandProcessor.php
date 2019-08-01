@@ -492,4 +492,31 @@ class CommandProcessor
 
         $this->logger->info(sprintf('Sent photo to user %s', $payload['threadId']), $payload);
     }
+
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function getPreferences(array $payload): void
+    {
+        $this->logger->info(sprintf('Request preferences from server'), $payload);
+
+        $response = $this->instagram->push->getPreferences();
+
+        $message = json_decode($response, true);
+
+        $request = [
+            'method' => 'updatePreferences',
+            'payload' => [
+                'response' => $message
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Requested preferences from server'), $payload);
+    }
 }
