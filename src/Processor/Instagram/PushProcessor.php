@@ -65,16 +65,16 @@ class PushProcessor
         $this->logger->info(sprintf('Received like notification for mediaId: "%s"',  $notification->getActionParam('id')), $notification->getActionParams());
     }
 
-//    /**
-//     * @param Notification $notification
-//     * @throws \AMQPChannelException
-//     * @throws \AMQPConnectionException
-//     * @throws \AMQPExchangeException
-//     * @throws \AMQPQueueException
-//     */
-//    public function comment(Notification $notification): void
-//    {
-//        $action = $notification->getActionPath();
+    /**
+     * @param Notification $notification
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function comment(Notification $notification): void
+    {
+        $action = $notification->getActionPath();
 //
 //        if ($action === 'comments_v2') {
 //            $mediaId = $notification->getActionParam('media_id');
@@ -117,8 +117,9 @@ class PushProcessor
 //        }
 //
 //        $this->logger->warning(sprintf('Undefined comment message %s', $action), $notification->getActionParams());
-//
-//    }
+
+        $this->logger->warning(sprintf('Skipped comment message %s', $action), $notification->getActionParams());
+    }
 
     /**
      * @param Notification $notification
