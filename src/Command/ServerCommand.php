@@ -297,7 +297,7 @@ class ServerCommand extends Command
             }
         });
 
-        $loop->addPeriodicTimer(300, function () use ($periodicProcessor) {
+        $loop->addPeriodicTimer(150, function () use ($periodicProcessor) {
             $periodicProcessor->getRecentActivityInbox();
         });
 
