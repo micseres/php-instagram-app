@@ -6,6 +6,7 @@ namespace App\Command;
 use App\Exception\InstagramChallengeCodeException;
 use App\Exception\InstagramLoginException;
 use App\Instagram\ExtendedInstagram;
+use App\Processor\App\PeriodicProcessor;
 use App\Processor\Erp\CommandProcessor;
 use App\Processor\Instagram\PushProcessor;
 use App\Processor\Instagram\RealtimeProcessor;
@@ -174,6 +175,8 @@ class ServerCommand extends Command
             }
         }
 
+
+
         $logPath = __DIR__.'/../../var/log/';
 
         $pushLogger = new Logger('IG_PUSHIER');
@@ -183,6 +186,8 @@ class ServerCommand extends Command
         $commandLogger = new Logger('IG_COMMAND');
         $commandProcessorLogger = new Logger('IG_COMMAND_PROCESSOR');
         $directProcessorLogger = new Logger('IG_DIRECT_PROCESSOR');
+        $periodicProcessorLogger = new Logger('IG_PERIODIC_PROCESSOR');
+
 
         $pushLogger->pushHandler(new StreamHandler($logPath.'push_logger.log', Logger::INFO));
         $pushProcessorLogger->pushHandler(new StreamHandler($logPath.'push_processor_logger.log', Logger::INFO));
@@ -191,6 +196,7 @@ class ServerCommand extends Command
         $commandLogger->pushHandler(new StreamHandler($logPath.'command_logger.log', Logger::INFO));
         $commandProcessorLogger->pushHandler(new StreamHandler($logPath.'command_processor_logger.log', Logger::INFO));
         $directProcessorLogger->pushHandler(new StreamHandler($logPath.'direct_processor_logger.log', Logger::INFO));
+        $periodicProcessorLogger->pushHandler(new StreamHandler($logPath.'direct_periodic_logger.log', Logger::INFO));
 
         if ($processorsDebug) {
             $pushLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
@@ -200,6 +206,7 @@ class ServerCommand extends Command
             $commandLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
             $commandProcessorLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
             $directProcessorLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
+            $periodicProcessorLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
         }
 
         $loop = Factory::create();
@@ -211,6 +218,7 @@ class ServerCommand extends Command
         $realtimeProcessor = new RealtimeProcessor($this->instagramToErpQuery, $realtimeProcessorLogger);
         $commandProcessor = new CommandProcessor($ig, $this->instagramToErpQuery, $commandProcessorLogger);
         $directProcessor = new DirectProcessor($rtc, $loop, $ig, $this->instagramToErpQuery, $commandProcessorLogger);
+        $periodicProcessor = new PeriodicProcessor($ig, $this->instagramToErpQuery, $periodicProcessorLogger);
 
         $push->on('incoming', [$pushProcessor, 'incoming']);
         $push->on('like', [$pushProcessor, 'like']);
@@ -289,6 +297,9 @@ class ServerCommand extends Command
             }
         });
 
+        $loop->addPeriodicTimer(300, function () use ($periodicProcessor) {
+            $periodicProcessor->getRecentActivityInbox();
+        });
 
         $rtc->start();
         $push->start();
