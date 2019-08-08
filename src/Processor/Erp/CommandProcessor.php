@@ -299,7 +299,30 @@ class CommandProcessor
     {
         $this->logger->info(sprintf('Post answer to comment %s in media %s', $payload['replyCommentId'], $payload['mediaId']), $payload);
 
-        $commentResponse = $this->instagram->media->comment($payload['mediaId'], $payload['message'], $payload['replyCommentId']);
+        try {
+            $commentResponse = $this->instagram->media->comment($payload['mediaId'], $payload['message'], $payload['replyCommentId']);
+        } catch (\InstagramAPI\Exception\FeedbackRequiredException $exception) {
+            $errorResponse = json_decode($exception->getResponse()->getHttpResponse()->getBody(), true);
+
+            if ($errorResponse['feedback_message'] === "The comment you replied to was deleted.") {
+                $request = [
+                    'method' => 'answeredCommentWasDeleted',
+                    'payload' => [
+                        'appealId' => $payload['appealId'],
+                        'mediaId' => $payload['mediaId'],
+                        'replyCommentId' => $payload['replyCommentId'],
+                    ]
+                ];
+
+                $this->instagramToErpQuery->publish(json_encode($request));
+
+                $this->logger->info(sprintf('Posted answer to comment fallied. Comment %s was deleted in media %s', $payload['replyCommentId'], $payload['mediaId']), $errorResponse);
+
+                return;
+            }
+
+            throw $exception;
+        }
 
         $message = json_decode($commentResponse, true);
 

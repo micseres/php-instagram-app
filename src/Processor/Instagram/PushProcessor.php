@@ -75,50 +75,50 @@ class PushProcessor
     public function comment(Notification $notification): void
     {
         $action = $notification->getActionPath();
-//
-//        if ($action === 'comments_v2') {
-//            $mediaId = $notification->getActionParam('media_id');
-//            $targetCommentId = $notification->getActionParam('target_comment_id');
-//
-//            $request = [
-//                'method' => 'getNewAnswerForCommentMedia',
-//                'payload' => [
-//                    'action' => $action,
-//                    'mediaId' => $mediaId,
-//                    'targetCommentId' => $targetCommentId,
-//                ]
-//            ];
-//
-//            $this->instagramToErpQuery->publish(json_encode($request));
-//
-//            $this->logger->info(sprintf('Comment for comment. Media ID: %s Target comment ID: %s Action: %s', $mediaId, $targetCommentId, $action), $notification->getActionParams());
-//
-//            return;
-//        }
-//
-//        if ($action === 'media') {
-//            $mediaId = $notification->getActionParam('id');
-//            $commentId = $notification->getActionParam('forced_preview_comment_id');
-//
-//            $request = [
-//                'method' => 'getNewCommentToMedia',
-//                'payload' => [
-//                    'action' => $action,
-//                    'mediaId' => $mediaId,
-//                    'commentId' => $commentId,
-//                ]
-//            ];
-//
-//            $this->instagramToErpQuery->publish(json_encode($request));
-//
-//            $this->logger->info(sprintf('Comment for media. Media ID: %s Comment ID: %s Action: %s', $mediaId, $commentId, $action), $notification->getActionParams());
-//
-//            return;
-//        }
-//
-//        $this->logger->warning(sprintf('Undefined comment message %s', $action), $notification->getActionParams());
 
-        $this->logger->warning(sprintf('Skipped comment message %s', $action), $notification->getActionParams());
+        if ($action === 'comments_v2') {
+            $mediaId = $notification->getActionParam('media_id');
+            $targetCommentId = $notification->getActionParam('target_comment_id');
+
+            $request = [
+                'method' => 'getNewAnswerForCommentMedia',
+                'payload' => [
+                    'action' => $action,
+                    'mediaId' => $mediaId,
+                    'targetCommentId' => $targetCommentId,
+                ]
+            ];
+
+            $this->instagramToErpQuery->publish(json_encode($request));
+
+            $this->logger->info(sprintf('Comment for comment. Media ID: %s Target comment ID: %s Action: %s', $mediaId, $targetCommentId, $action), $notification->getActionParams());
+
+            return;
+        }
+
+        if ($action === 'media') {
+            $mediaId = $notification->getActionParam('id');
+            $commentId = $notification->getActionParam('forced_preview_comment_id');
+
+            $request = [
+                'method' => 'getNewCommentToMedia',
+                'payload' => [
+                    'action' => $action,
+                    'mediaId' => $mediaId,
+                    'commentId' => $commentId,
+                ]
+            ];
+
+            $this->instagramToErpQuery->publish(json_encode($request));
+
+            $this->logger->info(sprintf('Comment for media. Media ID: %s Comment ID: %s Action: %s', $mediaId, $commentId, $action), $notification->getActionParams());
+
+            return;
+        }
+
+        $this->logger->warning(sprintf('Undefined comment m essage %s', $action), $notification->getActionParams());
+
+//        $this->logger->warning(sprintf('Skipped comment message %s', $action), $notification->getActionParams());
     }
 
     /**

@@ -297,9 +297,9 @@ class ServerCommand extends Command
             }
         });
 
-        $loop->addPeriodicTimer(150, function () use ($periodicProcessor) {
-            $periodicProcessor->getRecentActivityInbox();
-        });
+//        $loop->addPeriodicTimer(150, function () use ($periodicProcessor) {
+//            $periodicProcessor->getRecentActivityInbox();
+//        });
 
         $rtc->start();
         $push->start();
