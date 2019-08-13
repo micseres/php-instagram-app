@@ -300,7 +300,7 @@ class ServerCommand extends Command
         });
 
         if (false === (bool)getenv('WORK_WITH_PUSH')) {
-            $loop->addPeriodicTimer(150, function () use ($periodicProcessor) {
+            $loop->addPeriodicTimer(300, function () use ($periodicProcessor) {
                 $periodicProcessor->getRecentActivityInbox();
             });
         }
