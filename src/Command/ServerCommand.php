@@ -211,29 +211,30 @@ class ServerCommand extends Command
 
         $loop = Factory::create();
 
-        $push = new InstagramAPIPush($loop, $ig, $pushLogger);
+
         $rtc = new InstagramAPIRealtime($ig, $loop, $realtimeLogger);
 
-        $pushProcessor = new PushProcessor($this->instagramToErpQuery, $pushProcessorLogger);
         $realtimeProcessor = new RealtimeProcessor($this->instagramToErpQuery, $realtimeProcessorLogger);
         $commandProcessor = new CommandProcessor($ig, $this->instagramToErpQuery, $commandProcessorLogger);
         $directProcessor = new DirectProcessor($rtc, $loop, $ig, $this->instagramToErpQuery, $commandProcessorLogger);
         $periodicProcessor = new PeriodicProcessor($ig, $this->instagramToErpQuery, $periodicProcessorLogger);
 
         if (true === (bool)getenv('WORK_WITH_PUSH')) {
+            $push = new InstagramAPIPush($loop, $ig, $pushLogger);
+            $pushProcessor = new PushProcessor($this->instagramToErpQuery, $pushProcessorLogger);
             $push->on('incoming', [$pushProcessor, 'incoming']);
             $push->on('like', [$pushProcessor, 'like']);
             $push->on('comment', [$pushProcessor, 'comment']);
             $push->on('direct_v2_message', [$pushProcessor, 'directMessage']);
-        }
 
-        $push->on('error', function (\Exception $e) use ($push, $loop) {
-            $this->output->writeln(
-                sprintf('[!!!] Got fatal error from FBNS: %s%s', $e->getMessage(), PHP_EOL)
-            );
-            $push->stop();
-            $loop->stop();
-        });
+            $push->on('error', function (\Exception $e) use ($push, $loop) {
+                $this->output->writeln(
+                    sprintf('[!!!] Got fatal error from FBNS: %s%s', $e->getMessage(), PHP_EOL)
+                );
+                $push->stop();
+                $loop->stop();
+            });
+        }
 
         $rtc->on('live-started', [$realtimeProcessor, 'liveStarted']);
         $rtc->on('live-stopped', [$realtimeProcessor, 'liveStopped']);
@@ -306,7 +307,10 @@ class ServerCommand extends Command
         }
 
         $rtc->start();
-        $push->start();
+
+        if (true === (bool)getenv('WORK_WITH_PUSH')) {
+            $push->start();
+        }
 
         $loop->run();
     }
