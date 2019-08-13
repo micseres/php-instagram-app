@@ -220,10 +220,12 @@ class ServerCommand extends Command
         $directProcessor = new DirectProcessor($rtc, $loop, $ig, $this->instagramToErpQuery, $commandProcessorLogger);
         $periodicProcessor = new PeriodicProcessor($ig, $this->instagramToErpQuery, $periodicProcessorLogger);
 
-        $push->on('incoming', [$pushProcessor, 'incoming']);
-        $push->on('like', [$pushProcessor, 'like']);
-        $push->on('comment', [$pushProcessor, 'comment']);
-        $push->on('direct_v2_message', [$pushProcessor, 'directMessage']);
+        if (true === (bool)getenv('WORK_WITH_PUSH')) {
+            $push->on('incoming', [$pushProcessor, 'incoming']);
+            $push->on('like', [$pushProcessor, 'like']);
+            $push->on('comment', [$pushProcessor, 'comment']);
+            $push->on('direct_v2_message', [$pushProcessor, 'directMessage']);
+        }
 
         $push->on('error', function (\Exception $e) use ($push, $loop) {
             $this->output->writeln(
@@ -297,9 +299,11 @@ class ServerCommand extends Command
             }
         });
 
-//        $loop->addPeriodicTimer(150, function () use ($periodicProcessor) {
-//            $periodicProcessor->getRecentActivityInbox();
-//        });
+        if (false === (bool)getenv('WORK_WITH_PUSH')) {
+            $loop->addPeriodicTimer(150, function () use ($periodicProcessor) {
+                $periodicProcessor->getRecentActivityInbox();
+            });
+        }
 
         $rtc->start();
         $push->start();
