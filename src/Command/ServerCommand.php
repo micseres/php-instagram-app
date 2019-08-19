@@ -5,13 +5,15 @@ namespace App\Command;
 
 use App\Exception\InstagramChallengeCodeException;
 use App\Exception\InstagramLoginException;
+use App\Exception\InstagramWrongQueryException;
 use App\Instagram\ExtendedInstagram;
 use App\Processor\App\PeriodicProcessor;
 use App\Processor\Erp\CommandProcessor;
 use App\Processor\Instagram\PushProcessor;
 use App\Processor\Instagram\RealtimeProcessor;
 use App\Processor\Erp\DirectProcessor;
-use App\Rabbit\ErpToInstagramQuery;
+use App\Rabbit\ErpToInstagramFastQuery;
+use App\Rabbit\ErpToInstagramSafeQuery;
 use App\Rabbit\ErpToInstagramSlowQuery;
 use App\Rabbit\InstagramToErpQuery;
 use InstagramAPI\Exception\ChallengeRequiredException;
@@ -46,7 +48,7 @@ class ServerCommand extends Command
      */
     protected static $defaultName = 'app:server';
     /**
-     * @var ErpToInstagramQuery
+     * @var ErpToInstagramSafeQuery
      */
     private $erpToInstagramQuery;
     /**
@@ -57,22 +59,29 @@ class ServerCommand extends Command
      * @var ErpToInstagramSlowQuery
      */
     private $erpToInstagramSlowQuery;
+    /**
+     * @var ErpToInstagramFastQuery
+     */
+    private $erpToInstagramFastQuery;
 
     /**
      * ServerCommand constructor.
      * @param InstagramToErpQuery $instagramToErpQuery
-     * @param ErpToInstagramQuery $erpToInstagramQuery
+     * @param ErpToInstagramSafeQuery $erpToInstagramQuery
      * @param ErpToInstagramSlowQuery $erpToInstagramSlowQuery
+     * @param ErpToInstagramFastQuery $erpToInstagramFastQuery
      */
     public function __construct(
         InstagramToErpQuery $instagramToErpQuery,
-        ErpToInstagramQuery $erpToInstagramQuery,
-        ErpToInstagramSlowQuery $erpToInstagramSlowQuery
+        ErpToInstagramSafeQuery $erpToInstagramQuery,
+        ErpToInstagramSlowQuery $erpToInstagramSlowQuery,
+        ErpToInstagramFastQuery $erpToInstagramFastQuery
     ) {
         parent::__construct();
         $this->erpToInstagramQuery = $erpToInstagramQuery;
         $this->instagramToErpQuery = $instagramToErpQuery;
         $this->erpToInstagramSlowQuery = $erpToInstagramSlowQuery;
+        $this->erpToInstagramFastQuery = $erpToInstagramFastQuery;
     }
 
     protected function configure()
@@ -179,6 +188,7 @@ class ServerCommand extends Command
 
         $logPath = __DIR__.'/../../var/log/';
 
+        $appLogger = new Logger('APP_LOGGER');
         $pushLogger = new Logger('IG_PUSHIER');
         $pushProcessorLogger = new Logger('APP_PUSHIER_PROCESSOR');
         $realtimeLogger = new Logger('IG_REALTIME');
@@ -189,6 +199,7 @@ class ServerCommand extends Command
         $periodicProcessorLogger = new Logger('IG_PERIODIC_PROCESSOR');
 
 
+        $appLogger->pushHandler(new StreamHandler($logPath.'app_logger.log', Logger::INFO));
         $pushLogger->pushHandler(new StreamHandler($logPath.'push_logger.log', Logger::INFO));
         $pushProcessorLogger->pushHandler(new StreamHandler($logPath.'push_processor_logger.log', Logger::INFO));
         $realtimeLogger->pushHandler(new StreamHandler($logPath.'realtime_logger.log', Logger::INFO));
@@ -199,6 +210,7 @@ class ServerCommand extends Command
         $periodicProcessorLogger->pushHandler(new StreamHandler($logPath.'direct_periodic_logger.log', Logger::INFO));
 
         if ($processorsDebug) {
+            $appLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
             $pushLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
             $pushProcessorLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
             $realtimeLogger->pushHandler(new StreamHandler('php://stdout', Logger::INFO));
@@ -210,7 +222,6 @@ class ServerCommand extends Command
         }
 
         $loop = Factory::create();
-
 
         $rtc = new InstagramAPIRealtime($ig, $loop, $realtimeLogger);
 
@@ -227,10 +238,8 @@ class ServerCommand extends Command
             $push->on('comment', [$pushProcessor, 'comment']);
             $push->on('direct_v2_message', [$pushProcessor, 'directMessage']);
 
-            $push->on('error', function (\Exception $e) use ($push, $loop) {
-                $this->output->writeln(
-                    sprintf('[!!!] Got fatal error from FBNS: %s%s', $e->getMessage(), PHP_EOL)
-                );
+            $push->on('error', function (\Exception $e) use ($push, $loop, $appLogger) {
+                $appLogger->error(sprintf('[!!!] Got fatal error from FBNS: %s%s', $e->getMessage(), PHP_EOL));
                 $push->stop();
                 $loop->stop();
             });
@@ -256,12 +265,31 @@ class ServerCommand extends Command
         $rtc->on('client-context-ack', [$directProcessor, 'clientContextAck']);
         $rtc->on('client-context-ack', [$realtimeProcessor, 'clientContextAck']);
 
-        $rtc->on('error', function (\Exception $e) use ($rtc, $loop) {
-            $this->output->writeln(
-                sprintf('[!!!] Got fatal error from Realtime: %s%s', $e->getMessage(), PHP_EOL)
-            );
+        $rtc->on('error', function (\Exception $e) use ($rtc, $loop, $appLogger) {
+            $appLogger->error(sprintf('[!!!] Got fatal error from Realtime: %s%s', $e->getMessage(), PHP_EOL));
             $rtc->stop();
             $loop->stop();
+        });
+
+        $fastIntervalQueue = $this->erpToInstagramFastQuery->getQueue();
+
+
+        $loop->addPeriodicTimer(0.1, function () use ($fastIntervalQueue, $directProcessor, $appLogger) {
+            $message = $fastIntervalQueue->get();
+
+            if (false !== $message) {
+                $payload = json_decode($message->getBody(),  true);
+
+                if ($payload['processor'] === 'direct') {
+                    call_user_func([$directProcessor, $payload['method']], $payload['payload']);
+                } else {
+                    $appLogger->error('Fast query allowed only for direct');
+                    $fastIntervalQueue->ack($message->getDeliveryTag());
+                    throw new InstagramWrongQueryException('Fast query allowed only for direct');
+                }
+
+                $fastIntervalQueue->ack($message->getDeliveryTag());
+            }
         });
 
         $shortIntervalQueue = $this->erpToInstagramQuery->getQueue();
