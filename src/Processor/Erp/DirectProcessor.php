@@ -157,7 +157,8 @@ class DirectProcessor
                 'payload' => [
                     'conversationId' => $payload['conversationId'],
                     'messageId' => $payload['messageId'],
-                    'threadId' =>  $payload['threadId']
+                    'threadId' =>  $payload['threadId'],
+                    'result' => $result
                 ]
             ];
 
@@ -197,7 +198,8 @@ class DirectProcessor
                 'payload' => [
                     'conversationId' => $payload['conversationId'],
                     'messageId' => $payload['messageId'],
-                    'threadId' =>  $payload['threadId']
+                    'threadId' =>  $payload['threadId'],
+                    'result' => $result
                 ]
             ];
 
@@ -236,7 +238,8 @@ class DirectProcessor
                 'payload' => [
                     'conversationId' => $payload['conversationId'],
                     'messageId' => $payload['messageId'],
-                    'threadId' =>  $payload['threadId']
+                    'threadId' =>  $payload['threadId'],
+                    'result' => $result
                 ]
             ];
 
@@ -275,7 +278,8 @@ class DirectProcessor
                 'payload' => [
                     'conversationId' => $payload['conversationId'],
                     'messageId' => $payload['messageId'],
-                    'threadId' =>  $payload['threadId']
+                    'threadId' =>  $payload['threadId'],
+                    'result' => $result
                 ]
             ];
 
@@ -314,7 +318,8 @@ class DirectProcessor
                 'payload' => [
                     'conversationId' => $payload['conversationId'],
                     'messageId' => $payload['messageId'],
-                    'threadId' =>  $payload['threadId']
+                    'threadId' =>  $payload['threadId'],
+                    'result' => $result
                 ]
             ];
 
@@ -353,7 +358,8 @@ class DirectProcessor
                 'payload' => [
                     'conversationId' => $payload['conversationId'],
                     'messageId' => $payload['messageId'],
-                    'threadId' =>  $payload['threadId']
+                    'threadId' =>  $payload['threadId'],
+                    'result' => $result
                 ]
             ];
 
@@ -391,7 +397,8 @@ class DirectProcessor
                     'payload' => [
                         'conversationId' => $payload['conversationId'],
                         'messageId' => $payload['messageId'],
-                        'threadId' =>  $payload['threadId']
+                        'threadId' =>  $payload['threadId'],
+                        'result' => $result
                     ]
                 ];
 
@@ -429,7 +436,8 @@ class DirectProcessor
                     'payload' => [
                         'conversationId' => $payload['conversationId'],
                         'messageId' => $payload['messageId'],
-                        'threadId' =>  $payload['threadId']
+                        'threadId' =>  $payload['threadId'],
+                        'result' => $result
                     ]
                 ];
 

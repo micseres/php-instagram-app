@@ -196,9 +196,28 @@ class RealtimeProcessor
      * @param string $threadId
      * @param string $threadItemId
      * @param DirectThreadItem $directThreadItem
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
      */
     public function threadItemUpdated(string $threadId, string $threadItemId, DirectThreadItem $directThreadItem): void
     {
+        $message = json_decode($directThreadItem,  true);
+
+        $request = [
+            'method' => 'threadItemUpdated',
+            'payload' => [
+                'direct' => [
+                    'threadId' => $threadId,
+                    'threadItemId' => $threadItemId
+                ],
+                'message' => $message,
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
         $this->logger->info(sprintf('Item %s has been updated in thread %s', $threadItemId, $threadId), []);
     }
 
