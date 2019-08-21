@@ -494,8 +494,8 @@ class CommandProcessor
 
         $recipients = [];
         $recipients['thread'] = $payload['threadId'];
-        $ack = $this->instagram->direct->sendPhoto($recipients, $filename);
-        $message = json_decode($ack, true);
+        $result = $this->instagram->direct->sendPhoto($recipients, $filename, ['client_context' => $payload['messageId']]);
+        $message = json_decode($result, true);
 
         unlink($filename);
 
@@ -508,6 +508,7 @@ class CommandProcessor
                 'threadId' => $payload['threadId'],
                 'messageId' => $payload['messageId'],
                 'conversationId' => $payload['conversationId'],
+                'result' => $result
             ]
         ];
 

@@ -390,7 +390,7 @@ class DirectProcessor
 
         $this->instagramToErpQuery->publish(json_encode($request));
 
-        $this->handleRealtimeContext($this->realtime->sendLikeToDirect($payload['threadId']))
+        $this->handleRealtimeContext($this->realtime->sendLikeToDirect($payload['threadId'], ['client_context' => $payload['messageId']]))
             ->then(function ($result) use ($payload) {
                 $request = [
                     'method' => 'messageToDirectHasBenDelivery',
