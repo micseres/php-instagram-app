@@ -190,7 +190,7 @@ class DirectProcessor
 
         $this->instagramToErpQuery->publish(json_encode($request));
 
-        $this->handleRealtimeContext($this->realtime->sendPostToDirect($payload['threadId'], $payload['storyId'], [
+        $this->handleRealtimeContext($this->realtime->sendPostToDirect($payload['threadId'], $payload['mediaId'], [
             'text' => isset($payload['text']) ? $payload['text'] : null,
         ]))->then(function ($result) use ($payload) {
             $request = [
