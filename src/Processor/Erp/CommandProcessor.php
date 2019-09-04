@@ -499,8 +499,6 @@ class CommandProcessor
 
         unlink($filename);
 
-        $this->instagramToErpQuery->publish(json_encode($request));
-
         $request = [
             'method' => 'messageToDirectHasBenDelivery',
             'payload' => [
@@ -542,5 +540,50 @@ class CommandProcessor
         $this->instagramToErpQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Requested preferences from server'), $payload);
+    }
+
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function sendMediaToDirect(array $payload): void
+    {
+        $this->logger->info(sprintf('Send media to user %s', $payload['accountId']), $payload);
+
+        $request = [
+            'method' => 'messageToDirectHasBenSend',
+            'payload' => [
+                'messageId' => $payload['messageId'],
+                'conversationId' => $payload['conversationId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $recipients = [];
+        $recipients['thread'] = $payload['threadId'];
+        $result = $this->instagram->direct->sendPost($recipients, $payload['mediaId'] ,[
+            'client_context' => $payload['messageId'],
+            'media_type' => $payload['mediaType']
+        ]);
+
+        $message = json_decode($result, true);
+
+        $request = [
+            'method' => 'postToDirectHasBenDelivery',
+            'payload' => [
+                'threadId' => $payload['threadId'],
+                'messageId' => $payload['messageId'],
+                'conversationId' => $payload['conversationId'],
+                'result' => $message
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Sent media to user %s', $payload['threadId']), $payload);
     }
 }

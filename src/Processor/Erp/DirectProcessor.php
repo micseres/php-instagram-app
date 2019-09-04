@@ -175,6 +175,8 @@ class DirectProcessor
      * @throws \AMQPConnectionException
      * @throws \AMQPExchangeException
      * @throws \AMQPQueueException
+     *
+     * @experimental
      */
     public function sendPostToDirect(array $payload): void
     {
@@ -191,6 +193,7 @@ class DirectProcessor
         $this->instagramToErpQuery->publish(json_encode($request));
 
         $this->handleRealtimeContext($this->realtime->sendPostToDirect($payload['threadId'], $payload['mediaId'], [
+            'client_context' => $payload['messageId'],
             'text' => isset($payload['text']) ? $payload['text'] : null,
         ]))->then(function ($result) use ($payload) {
             $request = [
@@ -215,6 +218,8 @@ class DirectProcessor
      * @throws \AMQPConnectionException
      * @throws \AMQPExchangeException
      * @throws \AMQPQueueException
+     *
+     * @experimental
      */
     public function sendStoryToDirect(array $payload): void
     {
@@ -231,6 +236,7 @@ class DirectProcessor
         $this->instagramToErpQuery->publish(json_encode($request));
 
         $this->handleRealtimeContext($this->realtime->sendStoryToDirect($payload['threadId'], $payload['storyId'], [
+            'client_context' => $payload['messageId'],
             'text' => isset($payload['text']) ? $payload['text'] : null,
         ]))->then(function ($result) use ($payload) {
             $request = [
@@ -255,6 +261,8 @@ class DirectProcessor
      * @throws \AMQPConnectionException
      * @throws \AMQPExchangeException
      * @throws \AMQPQueueException
+     *
+     * @experimental
      */
     public function sendProfileToDirect(array $payload): void
     {
@@ -271,6 +279,8 @@ class DirectProcessor
         $this->instagramToErpQuery->publish(json_encode($request));
 
         $this->handleRealtimeContext($this->realtime->sendProfileToDirect($payload['threadId'], $payload['locationId'], [
+            'client_context' => $payload['messageId'],
+
             'text' => isset($payload['text']) ? $payload['text'] : null,
         ]))->then(function ($result) use ($payload) {
             $request = [
@@ -295,6 +305,8 @@ class DirectProcessor
      * @throws \AMQPConnectionException
      * @throws \AMQPExchangeException
      * @throws \AMQPQueueException
+     *
+     * @experimental
      */
     public function sendLocationToDirect(array $payload): void
     {
@@ -311,6 +323,7 @@ class DirectProcessor
         $this->instagramToErpQuery->publish(json_encode($request));
 
         $this->handleRealtimeContext($this->realtime->sendLocationToDirect($payload['threadId'], $payload['locationId'], [
+            'client_context' => $payload['messageId'],
             'text' => isset($payload['text']) ? $payload['text'] : null,
         ]))->then(function ($result) use ($payload) {
             $request = [
@@ -335,6 +348,8 @@ class DirectProcessor
      * @throws \AMQPConnectionException
      * @throws \AMQPExchangeException
      * @throws \AMQPQueueException
+     *
+     * @experimental
      */
     public function sendHashtagToDirect(array $payload): void
     {
@@ -351,6 +366,7 @@ class DirectProcessor
         $this->instagramToErpQuery->publish(json_encode($request));
 
         $this->handleRealtimeContext($this->realtime->sendHashtagToDirect($payload['threadId'], $payload['hashtag'], [
+            'client_context' => $payload['messageId'],
             'text' => isset($payload['text']) ? $payload['text'] : null,
         ]))->then(function ($result) use ($payload) {
             $request = [
@@ -429,7 +445,7 @@ class DirectProcessor
 
         $this->instagramToErpQuery->publish(json_encode($request));
 
-        $this->handleRealtimeContext($this->realtime->sendReactionToDirect($payload['threadId'], $payload['threadItemId'], 'like'))
+        $this->handleRealtimeContext($this->realtime->sendReactionToDirect($payload['threadId'], $payload['threadItemId'], 'like', ['client_context' => $payload['messageId']]))
             ->then(function ($result) use ($payload) {
                 $request = [
                     'method' => 'messageToDirectHasBenDelivery',
