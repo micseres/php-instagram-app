@@ -100,7 +100,22 @@ class CommandProcessor
     {
         $this->logger->info(sprintf('Get info about user %s', $payload['userId']), $payload);
 
-        $mediaInfo = $this->instagram->people->getInfoById($payload['userId'])->getHttpResponse()->getBody();
+        try {
+            $mediaInfo = $this->instagram->people->getInfoById($payload['userId'])->getHttpResponse()->getBody();
+        } catch (\InstagramAPI\Exception\NotFoundException $exception) {
+//            $request = [
+//                'method' => 'userWasDeletedCompletely',
+//                'payload' => [
+//                    'userId' => $payload['userId']
+//                ]
+//            ];
+//
+//            $this->instagramToErpQuery->publish(json_encode($request));
+
+            $this->logger->warning(sprintf('Cant`t receive info about user user. That was not exists %s', $payload['userId']), ['message' => $exception->getMessage()]);
+
+            return;
+        }
 
         $message = json_decode($mediaInfo, true);
 
@@ -428,6 +443,7 @@ class CommandProcessor
                 'appealId' => $payload['appealId'],
                 'conversationId' => $payload['conversationId'],
                 'threadId' => $payload['threadId'],
+                'force' => $payload['force'],
                 'response' => $message
             ]
         ];
