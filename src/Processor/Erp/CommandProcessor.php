@@ -103,14 +103,14 @@ class CommandProcessor
         try {
             $mediaInfo = $this->instagram->people->getInfoById($payload['userId'])->getHttpResponse()->getBody();
         } catch (\InstagramAPI\Exception\NotFoundException $exception) {
-//            $request = [
-//                'method' => 'userWasDeletedCompletely',
-//                'payload' => [
-//                    'userId' => $payload['userId']
-//                ]
-//            ];
-//
-//            $this->instagramToErpQuery->publish(json_encode($request));
+            $request = [
+                'method' => 'userWasDeletedCompletely',
+                'payload' => [
+                    'userId' => $payload['userId']
+                ]
+            ];
+
+            $this->instagramToErpQuery->publish(json_encode($request));
 
             $this->logger->warning(sprintf('Cant`t receive info about user user. That was not exists %s', $payload['userId']), ['message' => $exception->getMessage()]);
 
@@ -601,5 +601,35 @@ class CommandProcessor
         $this->instagramToErpQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Sent media to user %s', $payload['threadId']), $payload);
+    }
+
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function deleteComment(array $payload): void
+    {
+        $this->logger->info(sprintf('Deleting comment %s from  %s', $payload['commentId'], $payload['mediaId']), $payload);
+
+        $result = $this->instagram->media->deleteComment($payload['mediaId'] ,$payload['commentId']);
+
+        $message = json_decode($result, true);
+
+        $request = [
+            'method' => 'commentWasDeleted',
+            'payload' => [
+                'commentId' => $payload['commentId'],
+                'mediaId' => $payload['mediaId'],
+                'messageId' => $payload['messageId'],
+                'result' => $message
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Deleted comment %s from  %s', $payload['commentId'], $payload['mediaId']), $payload);
     }
 }

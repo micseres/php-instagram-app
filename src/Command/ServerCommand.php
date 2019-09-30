@@ -274,7 +274,7 @@ class ServerCommand extends Command
         $fastIntervalQueue = $this->erpToInstagramFastQuery->getQueue();
 
 
-        $loop->addPeriodicTimer(0.1, function () use ($fastIntervalQueue, $directProcessor, $appLogger) {
+        $loop->addPeriodicTimer(0.1, function () use ($fastIntervalQueue, $directProcessor, $commandProcessor) {
             $message = $fastIntervalQueue->get();
 
             if (false !== $message) {
@@ -283,9 +283,7 @@ class ServerCommand extends Command
                 if ($payload['processor'] === 'direct') {
                     call_user_func([$directProcessor, $payload['method']], $payload['payload']);
                 } else {
-                    $appLogger->error('Fast query allowed only for direct');
-                    $fastIntervalQueue->ack($message->getDeliveryTag());
-                    throw new InstagramWrongQueryException('Fast query allowed only for direct');
+                    call_user_func([$commandProcessor, $payload['method']], $payload['payload']);
                 }
 
                 $fastIntervalQueue->ack($message->getDeliveryTag());
