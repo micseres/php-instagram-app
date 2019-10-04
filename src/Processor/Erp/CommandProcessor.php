@@ -336,6 +336,41 @@ class CommandProcessor
                 return;
             }
 
+            if ($errorResponse['feedback_message'] === "The post you were viewing has been deleted.") {
+                $request = [
+                    'method' => 'answeredCommentMediaHasBeenDeleted',
+                    'payload' => [
+                        'appealId' => $payload['appealId'],
+                        'mediaId' => $payload['mediaId'],
+                        'replyCommentId' => $payload['replyCommentId'],
+                    ]
+                ];
+
+                $this->instagramToErpQuery->publish(json_encode($request));
+
+                $this->logger->info(sprintf('Posted answer to comment fallied. The post %s you were viewing has been deleted.', $payload['mediaId']), $errorResponse);
+
+                return;
+            }
+
+            if ($errorResponse['feedback_message'] === "The post you were viewing is no longer available.") {
+                $request = [
+                    'method' => 'answeredCommentMediaIsNoLongerAvailable',
+                    'payload' => [
+                        'appealId' => $payload['appealId'],
+                        'mediaId' => $payload['mediaId'],
+                        'replyCommentId' => $payload['replyCommentId'],
+                    ]
+                ];
+
+                $this->instagramToErpQuery->publish(json_encode($request));
+
+                $this->logger->info(sprintf('Posted answer to comment fallied. The post %s you were viewing is no longer available.', $payload['mediaId']), $errorResponse);
+
+                return;
+            }
+
+
             throw $exception;
         }
 
