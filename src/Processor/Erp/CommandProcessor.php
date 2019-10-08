@@ -523,6 +523,7 @@ class CommandProcessor
      * @throws \AMQPConnectionException
      * @throws \AMQPExchangeException
      * @throws \AMQPQueueException
+     * @deprecated
      */
     public function sendPhotoToDirect(array $payload): void
     {
@@ -564,6 +565,47 @@ class CommandProcessor
         $this->instagramToErpQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Sent photo to user %s', $payload['threadId']), $payload);
+    }
+
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
+    public function sendLinkToDirect(array $payload): void
+    {
+        $this->logger->info(sprintf('Send link to direct %s', $payload['threadId']), $payload);
+
+        $request = [
+            'method' => 'messageToDirectHasBenSend',
+            'payload' => [
+                'messageId' => $payload['messageId'],
+                'conversationId' => $payload['conversationId'],
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $recipients['thread'] = $payload['threadId'];
+        $result = $this->instagram->direct->sendText($recipients, $payload['text'], ['client_context' => $payload['messageId']]);
+        $message = json_decode($result, true);
+
+        $request = [
+            'method' => 'messageToDirectHasBenDelivery',
+            'payload' => [
+                'itemId' => $message['payload']['item_id'],
+                'threadId' => $payload['threadId'],
+                'messageId' => $payload['messageId'],
+                'conversationId' => $payload['conversationId'],
+                'result' => $result
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Sent link to direct %s', $payload['threadId']), $payload);
     }
 
     /**
