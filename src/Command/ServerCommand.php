@@ -15,6 +15,7 @@ use App\Processor\Erp\DirectProcessor;
 use App\Rabbit\ErpToInstagramFastQuery;
 use App\Rabbit\ErpToInstagramSafeQuery;
 use App\Rabbit\ErpToInstagramSlowQuery;
+use App\Rabbit\InstagramToErpMediaQuery;
 use App\Rabbit\InstagramToErpQuery;
 use InstagramAPI\Exception\ChallengeRequiredException;
 use Monolog\Handler\StreamHandler;
@@ -63,16 +64,22 @@ class ServerCommand extends Command
      * @var ErpToInstagramFastQuery
      */
     private $erpToInstagramFastQuery;
+    /**
+     * @var InstagramToErpMediaQuery
+     */
+    private $instagramToErpMediaQuery;
 
     /**
      * ServerCommand constructor.
      * @param InstagramToErpQuery $instagramToErpQuery
+     * @param InstagramToErpMediaQuery $instagramToErpMediaQuery
      * @param ErpToInstagramSafeQuery $erpToInstagramQuery
      * @param ErpToInstagramSlowQuery $erpToInstagramSlowQuery
      * @param ErpToInstagramFastQuery $erpToInstagramFastQuery
      */
     public function __construct(
         InstagramToErpQuery $instagramToErpQuery,
+        InstagramToErpMediaQuery $instagramToErpMediaQuery,
         ErpToInstagramSafeQuery $erpToInstagramQuery,
         ErpToInstagramSlowQuery $erpToInstagramSlowQuery,
         ErpToInstagramFastQuery $erpToInstagramFastQuery
@@ -82,6 +89,7 @@ class ServerCommand extends Command
         $this->instagramToErpQuery = $instagramToErpQuery;
         $this->erpToInstagramSlowQuery = $erpToInstagramSlowQuery;
         $this->erpToInstagramFastQuery = $erpToInstagramFastQuery;
+        $this->instagramToErpMediaQuery = $instagramToErpMediaQuery;
     }
 
     protected function configure()
@@ -226,13 +234,13 @@ class ServerCommand extends Command
         $rtc = new InstagramAPIRealtime($ig, $loop, $realtimeLogger);
 
         $realtimeProcessor = new RealtimeProcessor($this->instagramToErpQuery, $realtimeProcessorLogger);
-        $commandProcessor = new CommandProcessor($ig, $this->instagramToErpQuery, $commandProcessorLogger);
+        $commandProcessor = new CommandProcessor($ig, $this->instagramToErpQuery, $this->instagramToErpMediaQuery, $commandProcessorLogger);
         $directProcessor = new DirectProcessor($rtc, $loop, $ig, $this->instagramToErpQuery, $commandProcessorLogger);
-        $periodicProcessor = new PeriodicProcessor($ig, $this->instagramToErpQuery, $periodicProcessorLogger);
+        $periodicProcessor = new PeriodicProcessor($ig, $this->instagramToErpMediaQuery, $periodicProcessorLogger);
 
         if (true === (bool)getenv('WORK_WITH_PUSH')) {
             $push = new InstagramAPIPush($loop, $ig, $pushLogger);
-            $pushProcessor = new PushProcessor($this->instagramToErpQuery, $pushProcessorLogger);
+            $pushProcessor = new PushProcessor($this->instagramToErpMediaQuery, $pushProcessorLogger);
             $push->on('incoming', [$pushProcessor, 'incoming']);
             $push->on('like', [$pushProcessor, 'like']);
             $push->on('comment', [$pushProcessor, 'comment']);

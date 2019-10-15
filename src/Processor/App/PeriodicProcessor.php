@@ -4,6 +4,7 @@
 namespace App\Processor\App;
 
 
+use App\Rabbit\InstagramToErpMediaQuery;
 use App\Rabbit\InstagramToErpQuery;
 use InstagramAPI\Instagram;
 use Psr\Log\LoggerInterface;
@@ -21,7 +22,7 @@ class PeriodicProcessor
     /**
      * @var InstagramToErpQuery
      */
-    private $instagramToErpQuery;
+    private $instagramToErpMediaQuery;
     /**
      * @var LoggerInterface
      */
@@ -30,17 +31,17 @@ class PeriodicProcessor
     /**
      * CommandProcessor constructor.
      * @param Instagram $instagram
-     * @param InstagramToErpQuery $instagramToErpQuery
+     * @param InstagramToErpMediaQuery $instagramToErpMediaQuery
      * @param LoggerInterface $logger
      */
     public function __construct(
         Instagram $instagram,
-        InstagramToErpQuery $instagramToErpQuery,
+        InstagramToErpMediaQuery $instagramToErpMediaQuery,
         LoggerInterface $logger
     )
     {
         $this->instagram = $instagram;
-        $this->instagramToErpQuery = $instagramToErpQuery;
+        $this->instagramToErpMediaQuery = $instagramToErpMediaQuery;
         $this->logger = $logger;
     }
 
@@ -63,7 +64,7 @@ class PeriodicProcessor
             'payload' => $message
         ];
 
-        $this->instagramToErpQuery->publish(json_encode($request));
+        $this->instagramToErpMediaQuery->publish(json_encode($request));
 
         $this->logger->info('Got recent activity inbox', $message);
     }

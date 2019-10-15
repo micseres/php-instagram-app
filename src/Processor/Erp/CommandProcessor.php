@@ -3,6 +3,7 @@
 
 namespace App\Processor\Erp;
 
+use App\Rabbit\InstagramToErpMediaQuery;
 use App\Rabbit\InstagramToErpQuery;
 use InstagramAPI\Exception\InstagramException;
 use InstagramAPI\Instagram;
@@ -26,21 +27,28 @@ class CommandProcessor
      * @var LoggerInterface
      */
     private $logger;
+    /**
+     * @var InstagramToErpMediaQuery
+     */
+    private $instagramToErpMediaQuery;
 
     /**
      * CommandProcessor constructor.
      * @param Instagram $instagram
      * @param InstagramToErpQuery $instagramToErpQuery
+     * @param InstagramToErpMediaQuery $instagramToErpMediaQuery
      * @param LoggerInterface $logger
      */
     public function __construct(
         Instagram $instagram,
         InstagramToErpQuery $instagramToErpQuery,
+        InstagramToErpMediaQuery $instagramToErpMediaQuery,
         LoggerInterface $logger
     )
     {
         $this->instagram = $instagram;
         $this->instagramToErpQuery = $instagramToErpQuery;
+        $this->instagramToErpMediaQuery = $instagramToErpMediaQuery;
         $this->logger = $logger;
     }
 
@@ -66,7 +74,7 @@ class CommandProcessor
                     ]
                 ];
 
-                $this->instagramToErpQuery->publish(json_encode($request));
+                $this->instagramToErpMediaQuery->publish(json_encode($request));
 
                 $this->logger->warning(sprintf('Media was deleted %s', $payload['mediaId']), []);
 
@@ -84,7 +92,7 @@ class CommandProcessor
             'payload' => $message
         ];
 
-        $this->instagramToErpQuery->publish(json_encode($request));
+        $this->instagramToErpMediaQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Received media %s', $payload['mediaId']), $message);
     }
@@ -110,7 +118,7 @@ class CommandProcessor
                 ]
             ];
 
-            $this->instagramToErpQuery->publish(json_encode($request));
+            $this->instagramToErpMediaQuery->publish(json_encode($request));
 
             $this->logger->warning(sprintf('Cant`t receive info about user user. That was not exists %s', $payload['userId']), ['message' => $exception->getMessage()]);
 
@@ -124,7 +132,7 @@ class CommandProcessor
             'payload' => $message
         ];
 
-        $this->instagramToErpQuery->publish(json_encode($request));
+        $this->instagramToErpMediaQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Received info about user %s', $payload['userId']), $message);
 
@@ -157,7 +165,7 @@ class CommandProcessor
             ]
         ];
 
-        $this->instagramToErpQuery->publish(json_encode($request));
+        $this->instagramToErpMediaQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Received comments for media %s', $payload['mediaId']), $message);
     }
@@ -186,7 +194,7 @@ class CommandProcessor
             ]
         ];
 
-        $this->instagramToErpQuery->publish(json_encode($request));
+        $this->instagramToErpMediaQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Received comment %s for media %s', $payload['commentId'], $payload['mediaId']), $message);
     }
@@ -216,7 +224,7 @@ class CommandProcessor
             ]
         ];
 
-        $this->instagramToErpQuery->publish(json_encode($request));
+        $this->instagramToErpMediaQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Received answers for comments %s in media %s', $payload['targetCommentId'], $payload['mediaId']), $message);
 
@@ -298,7 +306,7 @@ class CommandProcessor
             ]
         ];
 
-        $this->instagramToErpQuery->publish(json_encode($request));
+        $this->instagramToErpMediaQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Posted comment to media %s', $payload['mediaId']), $payload);
     }
@@ -329,7 +337,7 @@ class CommandProcessor
                     ]
                 ];
 
-                $this->instagramToErpQuery->publish(json_encode($request));
+                $this->instagramToErpMediaQuery->publish(json_encode($request));
 
                 $this->logger->info(sprintf('Posted answer to comment fallied. Comment %s was deleted in media %s', $payload['replyCommentId'], $payload['mediaId']), $errorResponse);
 
@@ -346,7 +354,7 @@ class CommandProcessor
                     ]
                 ];
 
-                $this->instagramToErpQuery->publish(json_encode($request));
+                $this->instagramToErpMediaQuery->publish(json_encode($request));
 
                 $this->logger->info(sprintf('Posted answer to comment fallied. The post %s you were viewing has been deleted.', $payload['mediaId']), $errorResponse);
 
@@ -363,7 +371,7 @@ class CommandProcessor
                     ]
                 ];
 
-                $this->instagramToErpQuery->publish(json_encode($request));
+                $this->instagramToErpMediaQuery->publish(json_encode($request));
 
                 $this->logger->info(sprintf('Posted answer to comment fallied. The post %s you were viewing is no longer available.', $payload['mediaId']), $errorResponse);
 
@@ -386,7 +394,7 @@ class CommandProcessor
             ]
         ];
 
-        $this->instagramToErpQuery->publish(json_encode($request));
+        $this->instagramToErpMediaQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Posted answer to comment %s in media %s', $payload['replyCommentId'], $payload['mediaId']), $message);
     }
@@ -413,7 +421,7 @@ class CommandProcessor
                     ]
                 ];
 
-                $this->instagramToErpQuery->publish(json_encode($request));
+                $this->instagramToErpMediaQuery->publish(json_encode($request));
 
                 $this->logger->warning(sprintf('Media was deleted %s', $payload['mediaId']), []);
 
@@ -433,7 +441,7 @@ class CommandProcessor
             ]
         ];
 
-        $this->instagramToErpQuery->publish(json_encode($request));
+        $this->instagramToErpMediaQuery->publish(json_encode($request));
 
 
         $this->logger->info(sprintf('Checked likes for media %s', $payload['mediaId']), $payload);
@@ -630,7 +638,7 @@ class CommandProcessor
             ]
         ];
 
-        $this->instagramToErpQuery->publish(json_encode($request));
+        $this->instagramToErpMediaQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Requested preferences from server'), $payload);
     }
@@ -705,7 +713,7 @@ class CommandProcessor
             ]
         ];
 
-        $this->instagramToErpQuery->publish(json_encode($request));
+        $this->instagramToErpMediaQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Deleted comment %s from  %s', $payload['commentId'], $payload['mediaId']), $payload);
     }

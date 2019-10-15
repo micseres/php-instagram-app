@@ -3,6 +3,7 @@
 
 namespace App\Processor\Instagram;
 
+use App\Rabbit\InstagramToErpMediaQuery;
 use App\Rabbit\InstagramToErpQuery;
 use \InstagramAPI\Push\Notification;
 use Psr\Log\LoggerInterface;
@@ -16,7 +17,7 @@ class PushProcessor
     /**
      * @var InstagramToErpQuery
      */
-    private $instagramToErpQuery;
+    private $instagramToErpMediaQuery;
     /**
      * @var LoggerInterface
      */
@@ -24,15 +25,15 @@ class PushProcessor
 
     /**
      * PushProcessor constructor.
-     * @param InstagramToErpQuery $instagramToErpQuery
+     * @param InstagramToErpMediaQuery $instagramToErpMediaQuery
      * @param LoggerInterface $logger
      */
     public function __construct(
-        InstagramToErpQuery $instagramToErpQuery,
+        InstagramToErpMediaQuery $instagramToErpMediaQuery,
         LoggerInterface $logger
 
     ) {
-        $this->instagramToErpQuery = $instagramToErpQuery;
+        $this->instagramToErpMediaQuery = $instagramToErpMediaQuery;
         $this->logger = $logger;
     }
 
@@ -60,7 +61,7 @@ class PushProcessor
             ]
         ];
 
-        $this->instagramToErpQuery->publish(json_encode($request));
+        $this->instagramToErpMediaQuery->publish(json_encode($request));
 
         $this->logger->info(sprintf('Received like notification for mediaId: "%s"',  $notification->getActionParam('id')), $notification->getActionParams());
     }
@@ -89,7 +90,7 @@ class PushProcessor
                 ]
             ];
 
-            $this->instagramToErpQuery->publish(json_encode($request));
+            $this->instagramToErpMediaQuery->publish(json_encode($request));
 
             $this->logger->info(sprintf('Comment for comment. Media ID: %s Target comment ID: %s Action: %s', $mediaId, $targetCommentId, $action), $notification->getActionParams());
 
@@ -109,7 +110,7 @@ class PushProcessor
                 ]
             ];
 
-            $this->instagramToErpQuery->publish(json_encode($request));
+            $this->instagramToErpMediaQuery->publish(json_encode($request));
 
             $this->logger->info(sprintf('Comment for media. Media ID: %s Comment ID: %s Action: %s', $mediaId, $commentId, $action), $notification->getActionParams());
 
