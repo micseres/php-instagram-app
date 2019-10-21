@@ -623,6 +623,37 @@ class CommandProcessor
      * @throws \AMQPExchangeException
      * @throws \AMQPQueueException
      */
+    public function deleteMessageFromDirect(array $payload): void
+    {
+        $this->logger->info(sprintf('Delete message %s in direct %s', $payload['threadItemId'], $payload['threadId']), $payload);
+
+        $result = $this->instagram->direct->deleteItem($payload['threadId'], $payload['threadItemId']);
+        $message = json_decode($result, true);
+
+        $request = [
+            'method' => 'messageInDirectHasBenDeleted',
+            'payload' => [
+                'messageId' => $payload['messageId'],
+                'threadItemId' => $payload['threadItemId'],
+                'threadId' => $payload['threadId'],
+                'conversationId' => $payload['conversationId'],
+                'appealId' => $payload['appealId'],
+                'result' => $message
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Deleted message %s in direct %s', $payload['threadItemId'], $payload['threadId']), $payload);
+    }
+
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
     public function getPreferences(array $payload): void
     {
         $this->logger->info(sprintf('Request preferences from server'), $payload);
