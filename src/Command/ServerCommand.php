@@ -236,7 +236,7 @@ class ServerCommand extends Command
         $realtimeProcessor = new RealtimeProcessor($this->instagramToErpQuery, $realtimeProcessorLogger);
         $commandProcessor = new CommandProcessor($ig, $this->instagramToErpQuery, $this->instagramToErpMediaQuery, $commandProcessorLogger);
         $directProcessor = new DirectProcessor($rtc, $loop, $ig, $this->instagramToErpQuery, $commandProcessorLogger);
-        $periodicProcessor = new PeriodicProcessor($ig, $this->instagramToErpMediaQuery, $periodicProcessorLogger);
+        $periodicProcessor = new PeriodicProcessor($ig, $this->instagramToErpQuery, $this->instagramToErpMediaQuery, $periodicProcessorLogger);
 
         if (true === (bool)getenv('WORK_WITH_PUSH')) {
             $push = new InstagramAPIPush($loop, $ig, $pushLogger);
@@ -339,6 +339,10 @@ class ServerCommand extends Command
                 $periodicProcessor->getRecentActivityInbox();
             });
         }
+
+        $loop->addPeriodicTimer(21600, function () use ($periodicProcessor) {
+            $periodicProcessor->getPendingInbox();
+        });
 
         $rtc->start();
 

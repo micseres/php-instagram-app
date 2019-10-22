@@ -455,6 +455,40 @@ class CommandProcessor
      * @throws \AMQPExchangeException
      * @throws \AMQPQueueException
      */
+    public function refreshPendingThread(array $payload): void
+    {
+        $this->logger->info(sprintf('Reread messages in pending thread %s', $payload['threadId']), $payload);
+
+        try {
+            $messages = $this->instagram->direct->getThread($payload['threadId'], $payload['cursor']);
+        } catch (\InstagramAPI\Exception\NotFoundException $exception) {
+            $this->logger->info(sprintf('Thread deleted in Instagram %s', $payload['threadId']), $payload);
+            return;
+        }
+
+        $message = json_decode($messages, true);
+
+        $request = [
+            'method' => 'refreshPendingThread',
+            'payload' => [
+                'threadId' => $payload['threadId'],
+                'response' => $message
+            ]
+        ];
+
+        $this->instagramToErpQuery->publish(json_encode($request));
+
+        $this->logger->info(sprintf('Rereaded messages in pending thread %s', $payload['threadId']), $payload);
+    }
+
+
+    /**
+     * @param array $payload
+     * @throws \AMQPChannelException
+     * @throws \AMQPConnectionException
+     * @throws \AMQPExchangeException
+     * @throws \AMQPQueueException
+     */
     public function refreshThread(array $payload): void
     {
         $this->logger->info(sprintf('Reread messages in thread %s', $payload['threadId']), $payload);
