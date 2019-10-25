@@ -340,7 +340,7 @@ class ServerCommand extends Command
             });
         }
 
-        $loop->addPeriodicTimer(21600, function () use ($periodicProcessor) {
+        $loop->addPeriodicTimer(7200, function () use ($periodicProcessor) {
             $periodicProcessor->getPendingInbox();
         });
 
