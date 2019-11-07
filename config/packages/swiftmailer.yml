@@ -1,0 +1,12 @@
+# Swiftmailer Configuration
+swiftmailer:
+    default_mailer: errors
+    mailers:
+        errors:
+            transport: '%env(ERROR_MAILER_TRANSPORT)%'
+            host: '%env(ERROR_MAILER_HOST)%'
+            username: '%env(ERROR_MAILER_USER)%'
+            password: '%env(ERROR_MAILER_PASSWORD)%'
+            auth_mode: '%env(ERROR_MAILER_AUTH_MODE)%'
+            encryption: '%env(ERROR_MAILER_ENCRYPTION)%'
+            port: '%env(ERROR_MAILER_PORT)%'

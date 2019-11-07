@@ -2,3 +2,5 @@ framework:
   #esi: ~
   #translator: { fallbacks: ['%locale%'] }
   secret: '%env(APP_SECRET)%'
+  php_errors:
+    log: true

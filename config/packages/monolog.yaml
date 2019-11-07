@@ -1,0 +1,11 @@
+monolog:
+    handlers:
+        swift:
+            type: swift_mailer
+            mailer: swiftmailer.mailer.errors
+            from_email: '%env(ERROR_MAILER_FROM)%'
+            to_email: '%env(ERROR_MAILER_TO)%'
+            subject: '%env(ERROR_MAILER_SUBJECT)%'
+            level: warning
+            formatter: monolog.formatter.html
+            content_type: text/html
