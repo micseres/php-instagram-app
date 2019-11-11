@@ -8,5 +8,5 @@ swiftmailer:
             username: '%env(ERROR_MAILER_USER)%'
             password: '%env(ERROR_MAILER_PASSWORD)%'
             auth_mode: '%env(ERROR_MAILER_AUTH_MODE)%'
-            encryption: '%env(ERROR_MAILER_ENCRYPTION)%'
+            encryption: null
             port: '%env(ERROR_MAILER_PORT)%'
